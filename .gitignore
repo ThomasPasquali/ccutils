@@ -1,0 +1,9 @@
+.vscode
+
+# Build & Install dirs
+*build/
+*install/
+
+# Examples
+examples/cpu/cpu_timers
+examples/cuda/cuda_example
