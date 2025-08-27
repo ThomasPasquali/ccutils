@@ -14,7 +14,7 @@ target_include_directories(ccutils INTERFACE
 
 # ---------------- CUDA package ----------------
 if(CCUTILS_ENABLE_CUDA)
-    message("Enabling CUDA module")
+    message("CCUTILS: Enabling CUDA module")
     enable_language(CUDA)
     add_library(ccutils_cuda INTERFACE)
     target_include_directories(ccutils_cuda INTERFACE
@@ -27,7 +27,7 @@ endif()
 
 # ---------------- MPI package ----------------
 if(CCUTILS_ENABLE_MPI)
-    message("Enabling MPI module")
+    message("CCUTILS: Enabling MPI module")
     find_package(MPI REQUIRED)  # Provides MPI::MPI_C and MPI::MPI_CXX
     add_library(ccutils_mpi INTERFACE)
     target_include_directories(ccutils_mpi INTERFACE
@@ -38,20 +38,33 @@ if(CCUTILS_ENABLE_MPI)
     target_compile_definitions(ccutils_mpi INTERFACE CCUTILS_ENABLE_MPI)
 endif()
 
+# ---------------- Namespace Aliases ----------------
+add_library(ccutils::ccutils ALIAS ccutils)
+
+if(TARGET ccutils_mpi)
+    add_library(ccutils::ccutils_mpi ALIAS ccutils_mpi)
+endif()
+
+if(TARGET ccutils_cuda)
+    add_library(ccutils::ccutils_cuda ALIAS ccutils_cuda)
+endif()
+
 # ---------------- Installation ----------------
-install(DIRECTORY include/ DESTINATION include)
-install(TARGETS ccutils EXPORT ccutilsTargets)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    install(DIRECTORY include/ DESTINATION include)
+    install(TARGETS ccutils EXPORT ccutilsTargets)
 
-if(CCUTILS_ENABLE_CUDA)
-    install(TARGETS ccutils_cuda EXPORT ccutilsTargets)
+    if(CCUTILS_ENABLE_CUDA)
+        install(TARGETS ccutils_cuda EXPORT ccutilsTargets)
+    endif()
+
+    if(CCUTILS_ENABLE_MPI)
+        install(TARGETS ccutils_mpi EXPORT ccutilsTargets)
+    endif()
+
+    install(EXPORT ccutilsTargets
+        FILE ccutilsConfig.cmake
+        NAMESPACE ccutils::
+        DESTINATION lib/cmake/ccutils
+    )
 endif()
-
-if(CCUTILS_ENABLE_MPI)
-    install(TARGETS ccutils_mpi EXPORT ccutilsTargets)
-endif()
-
-install(EXPORT ccutilsTargets
-    FILE ccutilsConfig.cmake
-    NAMESPACE ccutils::
-    DESTINATION lib/cmake/ccutils
-)

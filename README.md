@@ -28,23 +28,17 @@ You can omit `-DCCUTILS_ENABLE_XXX=ON` if you do not need to enable a specific p
 
 ## Usage in CMake Projects
 
-```cmake
-find_package(ccutils REQUIRED)
+### Fetch and Build Automatically (Recommended)
 
-# Link to your project
-target_link_libraries(myapp PRIVATE ccutils::ccutils)        # Base macros
-target_link_libraries(myapp PRIVATE ccutils::ccutils_cuda)   # CUDA (if enabled)
-target_link_libraries(myapp PRIVATE ccutils::ccutils_mpi)    # MPI  (if enabled)
-
-```
-
-Or via `FetchContent` (no need to manually download, build and install):
+Via `FetchContent`, no need to manually download, build and install.
 
 ```cmake
-# Download automatically with CMake
-include(FetchContent)
+# Enable CUDA and MPI (optional)
 set(CCUTILS_ENABLE_CUDA ON  CACHE BOOL "")
 set(CCUTILS_ENABLE_MPI  ON  CACHE BOOL "")
+
+# Download automatically with CMake
+include(FetchContent)
 FetchContent_Declare(
   ccutils
   GIT_REPOSITORY https://github.com/ThomasPasquali/ccutils.git
@@ -57,6 +51,36 @@ target_link_libraries(myapp PRIVATE ccutils::ccutils)        # Base macros
 target_link_libraries(myapp PRIVATE ccutils::ccutils_cuda)   # CUDA (if enabled)
 target_link_libraries(myapp PRIVATE ccutils::ccutils_mpi)    # MPI  (if enabled)
 ```
+
+### Add CMake Subdirectory
+
+```cmake
+# Enable CUDA and MPI (optional)
+set(CCUTILS_ENABLE_CUDA ON CACHE BOOL "Enable CUDA support in ccutils")
+set(CCUTILS_ENABLE_MPI ON CACHE BOOL "Enable MPI support in ccutils")
+
+add_subdirectory(ccutils)
+
+# Link to your project
+target_link_libraries(myapp PRIVATE ccutils::ccutils ccutils::ccutils_cuda ccutils::ccutils_mpi)
+```
+
+### Link Installed Library
+
+```cmake
+find_package(ccutils REQUIRED)
+
+# Link to your project
+target_link_libraries(myapp PRIVATE ccutils::ccutils)        # Base macros
+target_link_libraries(myapp PRIVATE ccutils::ccutils_cuda)   # CUDA (if enabled)
+target_link_libraries(myapp PRIVATE ccutils::ccutils_mpi)    # MPI  (if enabled)
+
+```
+> [!NOTE]  
+> Ensure to pass `ccutils` installation path to CMake.  
+> Option 1: add `-Dccutils_DIR=/your/install/path` to your build command.  
+> Option 2: append to CMAKE PREFIX PATH by adding to your CMake file `list(APPEND CMAKE_PREFIX_PATH "/your/install/path")`  
+
 
 ## Usage in Makefile Projects
 
