@@ -17,5 +17,6 @@
   printf("--------------------  %s  --------------------\n", s); \
   fflush(stdout);
 
+#define DEBUG_PRINT(fmt, ...) printf(BRIGHT_CYAN "[DEBUG] " fmt RESET, ##__VA_ARGS__);
 
 #endif

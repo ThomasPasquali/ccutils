@@ -4,6 +4,9 @@
 
 // Example: using timer macros with multiple runs and summary printing
 int main() {
+  // Debug print
+  DEBUG_PRINT("Hello, I'm a debug print that supports format. Look --> %d", 1);
+
   // Define two timers: one for repeated sum runs, one for single random work
   CPU_TIMER_DEF(work1);
   CPU_TIMER_DEF(work2);
