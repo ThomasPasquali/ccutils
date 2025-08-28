@@ -1,6 +1,8 @@
 #ifndef __CCUTILS_CPU_MACROS__
 #define __CCUTILS_CPU_MACROS__
 
+#include "colors.h"
+
 // Math
 #define CEILING(x,y) (((x) + (y) - 1) / (y))
 
