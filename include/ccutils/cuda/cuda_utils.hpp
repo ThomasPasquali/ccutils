@@ -70,5 +70,13 @@ inline void d2d_copy(T * d_dst, T * d_src, uint64_t n) {
   CUDA_CHECK(cudaMemcpy(d_dst, d_src, sizeof(T)*n, cudaMemcpyDeviceToDevice));
 }
 
+template <typename T>
+inline void d2d_copy(T ** d_dst, T * d_src, uint64_t n) {
+  if (n==0)           return;
+  if (*d_dst==nullptr) CUDA_CHECK(cudaMalloc(d_dst, sizeof(T)*n));
+
+  CUDA_CHECK(cudaMemcpy(*d_dst, d_src, sizeof(T)*n, cudaMemcpyDeviceToDevice));
+}
+
 
 #endif
