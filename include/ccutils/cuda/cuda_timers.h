@@ -1,7 +1,7 @@
 #ifndef __CCUTILS_CUDA_TIMERS__
 #define __CCUTILS_CUDA_TIMERS__
 #ifndef CCUTILS_ENABLE_CUDA
-#error "ccutils CUDA headers require -DCCUTILS_ENABLE_CUDA"
+// #error "ccutils CUDA headers require -DCCUTILS_ENABLE_CUDA"
 #endif
 
 #include <cuda_runtime.h>
