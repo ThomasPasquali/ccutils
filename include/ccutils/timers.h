@@ -20,16 +20,18 @@ namespace ccutils_timers {
     size_t n     = 0;
   };
 
-  inline TimerStats compute_stats(const std::vector<float>& values) {
+  inline TimerStats compute_stats(const std::vector<float>& values, uint32_t exclude_first_n=0) {
     TimerStats stats;
-    stats.n = values.size();
+    if (exclude_first_n>=values.size()) return stats;
+
+    stats.n = values.size() - exclude_first_n;
     if (stats.n == 0) return stats; // return default (warning will be printed by print_stats)
 
     // Compute sum, min, max
-    for (float v : values) {
-      stats.sum += v;
-      if (v < stats.min) stats.min = v;
-      if (v > stats.max) stats.max = v;
+    for (int i=exclude_first_n; i<values.size(); i++) {
+      stats.sum += values[i];
+      if (values[i] < stats.min) stats.min = values[i];
+      if (values[i] > stats.max) stats.max = values[i];
     }
 
     stats.avg = stats.sum / stats.n;
@@ -37,8 +39,8 @@ namespace ccutils_timers {
     // Compute stddev if n > 1
     if (stats.n > 1) {
       float var = 0.0f;
-      for (float v : values) {
-        float diff = v - stats.avg;
+      for (int i=exclude_first_n; i<values.size(); i++) {
+        float diff = values[i] - stats.avg;
         var += diff * diff;
       }
       stats.stddev = std::sqrt(var / (stats.n - 1));
@@ -47,8 +49,8 @@ namespace ccutils_timers {
     return stats;
   }
 
-  inline void print_stats(const std::vector<float>& values, const char* name, const char* prefix) {
-    TimerStats stats = compute_stats(values);
+  inline void print_stats(const std::vector<float>& values, const char* name, const char* prefix, uint32_t exclude_first_n=0) {
+    TimerStats stats = compute_stats(values, exclude_first_n);
 
     if (stats.n == 0) {
       printf(CCUTILS_FMT_TIMER_WARN, prefix, name);
@@ -168,6 +170,12 @@ namespace ccutils_timers {
 
 #define TIMER_PRINT_LAST_WPREFIX(name, prefix) \
   ccutils_timers::print_last_time(__timer_vals_##name, #name, #prefix);
+
+#define TIMER_PRINT_EXCLUDING_FIRST_N(name, nexclude) \
+  ccutils_timers::print_stats(__timer_vals_##name, #name, "Timer", nexclude);
+
+#define TIMER_PRINT_WPREFIX_STR(name, prefix) \
+  ccutils_timers::print_stats(__timer_vals_##name, #name, prefix);
 
 #define CPU_TIMER_DEF(name) \
   std::chrono::high_resolution_clock::time_point __timer_start_##name, __timer_stop_##name; \
