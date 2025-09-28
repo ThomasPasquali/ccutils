@@ -162,6 +162,9 @@ namespace ccutils_timers {
 #define TIMER_PRINT_LAST(name) \
   ccutils_timers::print_last_time(__timer_vals_##name, #name, "Timer");
 
+#define TIMER_PRINT_LAST_WPREFIX_STR(name, prefix) \
+  ccutils_timers::print_last_time(__timer_vals_##name, #name, prefix);
+
 #define TIMER_PRINT_ALL(name) \
   ccutils_timers::print_all_times(__timer_vals_##name, #name);
 
