@@ -75,6 +75,20 @@
         nvtxRangePushEx(&eventAttrib); \
     }
     #define NVTX_POP_RANGE nvtxRangePop();
+    #include <nvtx3/nvToolsExtCuda.h>
+    #define NVTX_PUSH_RANGE_CUDA(name,cid,stream) { \
+        int color_id = cid; \
+        color_id = color_id % num_colors; \
+        nvtxEventAttributes_t eventAttrib = {0}; \
+        eventAttrib.version = NVTX_VERSION; \
+        eventAttrib.size = NVTX_EVENT_ATTRIB_STRUCT_SIZE; \
+        eventAttrib.colorType = NVTX_COLOR_ARGB; \
+        eventAttrib.color = colors[color_id]; \
+        eventAttrib.messageType = NVTX_MESSAGE_TYPE_ASCII; \
+        eventAttrib.message.ascii = name; \
+        nvtxNameCuStreamA(stream, name); \
+        nvtxRangePushEx(&eventAttrib); \
+    }
 #else
     #define NVTX_PUSH_RANGE(name,cid)
     #define NVTX_POP_RANGE
