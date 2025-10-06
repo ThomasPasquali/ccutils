@@ -7,7 +7,7 @@
 #define MPI_ALL_PRINT(X) {                                                                                                              \
     int inmacro_myid, inmacro_ntask;                                                                                                    \
     MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                                                                                       \
-	MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                                                                      \
+	  MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                                                                      \
 	\
     FILE *fp;                                                                                                                           \
     char s[50], s1[50];                                                                                                                 \
@@ -77,6 +77,11 @@
     }  \
   }
 
-
+// Flushes stdout and sleeps for `useconds` microseconds. 1000000 == 1 second
+#define FLUSH_WAIT(useconds) \
+  do { \
+      fflush(stdout); \
+      sleep(useconds); \
+  } while(0);
 
 #endif
