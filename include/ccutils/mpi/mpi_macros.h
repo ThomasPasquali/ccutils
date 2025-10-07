@@ -81,7 +81,7 @@
 #define FLUSH_WAIT(useconds) \
   do { \
       fflush(stdout); \
-      sleep(useconds); \
+      usleep(useconds); \
   } while(0);
 
 #endif
