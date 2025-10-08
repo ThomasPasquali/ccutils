@@ -84,4 +84,15 @@
       usleep(useconds); \
   } while(0);
 
+#define MPI_STATUS_CHECK(NREQ, STATV, COMM) \
+for (int i = 0; i < NREQ; i++) { \
+    if (STATV[i].MPI_ERROR != MPI_SUCCESS) { \
+        char errstr[MPI_MAX_ERROR_STRING]; \
+        int len; \
+        MPI_Error_string(STATV[i].MPI_ERROR, errstr, &len); \
+        fprintf(stderr, "MPI error in request %d: %s\n", i, errstr); \
+        MPI_Abort(COMM, STATV[i].MPI_ERROR); \
+    } \
+}
+
 #endif
