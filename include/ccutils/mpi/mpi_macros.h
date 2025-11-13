@@ -57,10 +57,10 @@
     for (int i=0; i<inmacro_ntask; i++) {\
         if (inmacro_myid == i) {\
             int error; \
-            sprintf(s1, "cat %s", inmacro_myid, s);\
+            sprintf(s1, "cat %s", s);\
             error = system(s1);\
             if (error == -1) fprintf(stderr, "Error at line %d of file %s", __LINE__, __FILE__); \
-            sprintf(s1, "rm %s", inmacro_myid, s);\
+            sprintf(s1, "rm %s", s);\
             error = system(s1);\
             if (error == -1) fprintf(stderr, "Error at line %d of file %s", __LINE__, __FILE__); \
         }\
