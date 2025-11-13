@@ -42,7 +42,7 @@
 	MPI_Comm_size(CM, &inmacro_ntask);  \
     FILE *fp;\
     char s[50], s1[50];\
-    sprintf(s, "temp_%d.txt", inmacro_myid);\
+    sprintf(s, "temp_%s_%d.txt", #CM, inmacro_myid);\
     fp = fopen ( s, "w" );\
     fclose(fp);\
     fp = fopen ( s, "a+" );\
