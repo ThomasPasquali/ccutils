@@ -37,15 +37,17 @@
 
 #define MPI_COMMUNICATOR_PRINT(CM, X)  \
   {\
+    int global_rank; \
     int inmacro_myid, inmacro_ntask;  \
     MPI_Comm_rank(CM, &inmacro_myid);  \
 	MPI_Comm_size(CM, &inmacro_ntask);  \
+    MPI_Comm_rank(MPI_COMM_WORLD, &global_rank);  \
     char name[MPI_MAX_OBJECT_NAME]; \
     int name_length; \
     MPI_Comm_get_name(CM, name, &name_length); \
     FILE *fp;\
     char s[50], s1[50];\
-    sprintf(s, "temp_%s_%d.txt", name, inmacro_myid);\
+    sprintf(s, "temp_%s_%d_%d.txt", name, inmacro_myid, global_rank);\
     fp = fopen ( s, "w" );\
     fclose(fp);\
     fp = fopen ( s, "a+" );\
