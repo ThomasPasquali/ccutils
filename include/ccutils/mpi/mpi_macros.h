@@ -4,10 +4,18 @@
 #error "ccutils MPI headers require -DCCUTILS_ENABLE_MPI"
 #endif
 
+#define MPI_PRINT_ONCE(fmt, ...) {                  \
+    int inmacro_myid;                               \
+    MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
+    if (inmacro_myid == 0) {                        \
+        printf(fmt, ##__VA_ARGS__);                 \
+    }                                               \
+} 
+
 #define MPI_ALL_PRINT(X) {                                                                                                              \
     int inmacro_myid, inmacro_ntask;                                                                                                    \
     MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                                                                                       \
-	  MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                                                                      \
+	MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                                                                      \
 	\
     FILE *fp;                                                                                                                           \
     char s[50], s1[50];                                                                                                                 \
