@@ -3,7 +3,9 @@
 # Build & Install dirs
 *build/
 *install/
+*lib/
 
 # Examples
 examples/cpu/cpu_timers
 examples/cuda/cuda_example
+examples/mpi/mpi_example

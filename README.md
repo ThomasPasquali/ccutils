@@ -139,3 +139,23 @@ cmake --build build
 make
 ./cuda_example
 ```
+
+### MPI Example
+
+```bash
+# Install ccutils in `./install` enabling CUDA
+cmake -B build -S . -DCCUTILS_ENABLE_MPI=ON
+cmake --build build
+cmake --install build --prefix ./install
+
+cd examples/mpi
+
+# Using CMake
+cmake -B build -S .
+cmake --build build
+mpirun -n 4 ./build/mpi_example
+
+# Using Makefile
+make
+mpirun -n 4 ./build/mpi_example
+```
