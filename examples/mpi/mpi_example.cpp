@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 
     // --- Test other macros ---
     MPI_ALL_PRINT({
-        printf("[Rank %d] MPI_ALL_PRINT test message\n", rank);
+        fprintf(fp, "[Rank %d] MPI_ALL_PRINT test message\n", rank);
     });
 
     MPI_PROCESS_PRINT(MPI_COMM_WORLD, 1, {
