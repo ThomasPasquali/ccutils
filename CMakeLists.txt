@@ -5,12 +5,22 @@ project(ccutils LANGUAGES C CXX)
 option(CCUTILS_ENABLE_CUDA "Enable CUDA utilities" OFF)
 option(CCUTILS_ENABLE_MPI  "Enable MPI utilities"  OFF)
 
+# ---------------- nlohmann/json dependency ----------------
+include(FetchContent)
+FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+)
+FetchContent_MakeAvailable(json)
+
 # ---------------- Base package ----------------
 add_library(ccutils INTERFACE)
 target_include_directories(ccutils INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+target_link_libraries(ccutils INTERFACE nlohmann_json::nlohmann_json)
 
 # ---------------- CUDA package ----------------
 if(CCUTILS_ENABLE_CUDA)
@@ -23,6 +33,7 @@ if(CCUTILS_ENABLE_CUDA)
     )
     # target_link_libraries(ccutils_cuda INTERFACE CUDA::cudart)
     target_compile_definitions(ccutils_cuda INTERFACE CCUTILS_ENABLE_CUDA)
+    target_link_libraries(ccutils_cuda INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
 # ---------------- MPI package ----------------
@@ -34,7 +45,7 @@ if(CCUTILS_ENABLE_MPI)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
     )
-    target_link_libraries(ccutils_mpi INTERFACE MPI::MPI_C MPI::MPI_CXX)
+    target_link_libraries(ccutils_mpi INTERFACE MPI::MPI_C MPI::MPI_CXX nlohmann_json::nlohmann_json)
     target_compile_definitions(ccutils_mpi INTERFACE CCUTILS_ENABLE_MPI)
 endif()
 
