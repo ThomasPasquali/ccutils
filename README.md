@@ -86,16 +86,25 @@ target_link_libraries(myapp PRIVATE ccutils::ccutils_mpi)    # MPI  (if enabled)
 
 This library is **header-only**. You just need to add the `include/` folder to your compiler flags.
 
+> [!NOTE]
+> CMake is required to instal CCUTILS anyway
+
+First, make sure to have CCUTILS code on your system. Then, add the following to your makefile:
+
 ```make
-# Always
-CXXFLAGS += -I/path/to/cc-utils/include
+# Substitute `path/to` with your ccutils path
+CCUTILS = path/to/ccutils/install/include
+CXXFLAGS += -I$(CCUTILS)
 
-# If using CUDA utilities
-CXXFLAGS += -I/path/to/cc-utils/include -DCCUTILS_ENABLE_CUDA
+$(CCUTILS):
+	cd path/to/ccutils && \
+	cmake -S . -B build -DCCUTILS_ENABLE_MPI=ON && \
+	cmake --build build && \
+	cmake --install build --prefix ./install
 
-# If using MPI utilities
-CXXFLAGS += -I/path/to/cc-utils/include $(shell mpicxx --showme:compile) -DCCUTILS_ENABLE_MPI
-LDLIBS   += $(shell mpicxx --showme:link)
+# Ensure targets that depend on CCUTILS will build it if needed
+my_target: ... $(CCUTILS) ...
+  ...
 ```
 
 ## Examples

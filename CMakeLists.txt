@@ -6,13 +6,15 @@ option(CCUTILS_ENABLE_CUDA "Enable CUDA utilities" OFF)
 option(CCUTILS_ENABLE_MPI  "Enable MPI utilities"  OFF)
 
 # ---------------- nlohmann/json dependency ----------------
+message(STATUS "Fetching nlohmann_json...")
 include(FetchContent)
 FetchContent_Declare(
-    json
+    nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.12.0
 )
-FetchContent_MakeAvailable(json)
+FetchContent_MakeAvailable(nlohmann_json)
+message(STATUS "Done!")
 
 # ---------------- Base package ----------------
 add_library(ccutils INTERFACE)
@@ -64,6 +66,17 @@ endif()
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     install(DIRECTORY include/ DESTINATION include)
     install(TARGETS ccutils EXPORT ccutilsTargets)
+    
+    # Install nlohmann_json headers for classic Makefile projects
+    # Get the source directory of the fetched nlohmann_json
+    FetchContent_GetProperties(json)
+    if(json_POPULATED)
+        install(DIRECTORY ${json_SOURCE_DIR}/include/
+                DESTINATION include
+                FILES_MATCHING PATTERN "*.hpp")
+    endif()
+    
+    install(TARGETS nlohmann_json EXPORT ccutilsTargets)
 
     if(CCUTILS_ENABLE_CUDA)
         install(TARGETS ccutils_cuda EXPORT ccutilsTargets)
