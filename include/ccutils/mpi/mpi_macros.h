@@ -108,4 +108,16 @@ for (int i = 0; i < NREQ; i++) { \
     } \
 }
 
+#define MPI_CUDA_CHECK(call) {                                         \
+  int inmacro_myid, inmacro_ntask;                                     \
+  MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                        \
+  MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                       \
+  cudaError_t err = call;                                              \
+  if (err != cudaSuccess) {                                            \
+    fprintf(stderr, "[%d] CUDA error in file '%s' in line %i : %s (%u)\n",  \
+            inmacro_myid, __FILE__, __LINE__, cudaGetErrorString(err), err);         \
+    exit(err);                                                         \
+  }                                                                    \
+}
+
 #endif
