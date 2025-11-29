@@ -18,10 +18,10 @@
 // MPI prints
 #define CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START "-+-+-+- %s -+-+-+-\n"
 #define CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END   "-+-+-+- %s END -+-+-+-\n"
-#define CCUTILS_FMT_MPI_PRINT_ALL_START       "{{{Rank %d}}}\n"
-#define CCUTILS_FMT_MPI_PRINT_ALL_END         "{{{END Rank %d}}}\n"
+#define CCUTILS_FMT_MPI_PRINT_ALL_START       "[[Rank %d]]\n"
+#define CCUTILS_FMT_MPI_PRINT_ALL_END         "[[END Rank %d]]\n"
 // TODO create dbg macros
-#define CCUTILS_FMT_MPI_PRINT_ALL_DBG         "{{{Rank %d, File %s, Line %d}}}\n"
+#define CCUTILS_FMT_MPI_PRINT_ALL_DBG         "[[Rank %d, File %s, Line %d]]\n"
 
 // Errors
 #define CCUTILS_FMT_ERROR BRIGHT_RED "CCUTILS. Error at line %d of file '%s':\n\t%s" RESET "\n"

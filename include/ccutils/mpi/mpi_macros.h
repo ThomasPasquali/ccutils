@@ -50,11 +50,11 @@
             int error;                                                               \
             sprintf(s1, "cat ccutils_temp_%d.txt", inmacro_myid);                    \
             error = system(s1);                                                      \
-            if (error == -1) fprintf(stderr, CCUTILS_FMT_ERROR,                      \
+            if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                      \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not cat tmp file.");       \
             sprintf(s1, "rm ccutils_temp_%d.txt", inmacro_myid);                     \
             error = system(s1);                                                      \
-            if (error == -1) fprintf(stderr, CCUTILS_FMT_ERROR,                      \
+            if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                      \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not rm tmp file.");        \
         }                                                                            \
         MPI_Barrier(MPI_COMM_WORLD);                                                 \
