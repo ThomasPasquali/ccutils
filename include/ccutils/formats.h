@@ -15,6 +15,10 @@
 #define CCUTILS_FMT_SECTION_START "=+=+=+= %s :: %s =+=+=+=\n"
 #define CCUTILS_FMT_SECTION_END   "=+=+=+= %s END =+=+=+=\n"
 
+// Global JSON 
+#define CCUTILS_FMT_GLOBAL_JSON_START "=-=-= %s =-=-=\n"
+#define CCUTILS_FMT_GLOBAL_JSON_END   "=-=-= %s END =-=-=\n"
+
 // MPI prints
 #define CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START "-+-+-+- %s -+-+-+-\n"
 #define CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END   "-+-+-+- %s END -+-+-+-\n"

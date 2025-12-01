@@ -152,12 +152,13 @@
         MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                                                                           \
                                                                                                                                 \
         if (!__section_json_##name.empty())                                                                                     \
-            MPI_ALL_PRINT_NAMED(ccutils_rank_json, fprintf(fp, "%s\n", __section_json_##name.dump().c_str()))                 \
+            MPI_ALL_PRINT_NAMED(ccutils_rank_json, fprintf(fp, "%s\n", __section_json_##name.dump().c_str()))                   \
         /* Only rank 0 prints SECTION_END */                                                                                    \
         if (inmacro_myid == 0) __section_json_##name.clear();                                                                   \
         if (__section_json_global_##name && !__section_json_global_##name->empty()) {                                           \
-            printf("ccutils_json\n");                                                                                           \
+            printf(CCUTILS_FMT_GLOBAL_JSON_START, "ccutils_global_json");                                                       \
             printf("%s\n", __section_json_global_##name->dump().c_str());                                                       \
+            printf(CCUTILS_FMT_GLOBAL_JSON_END, "ccutils_global_json");                                                         \
             fflush(stdout);                                                                                                     \
             delete __section_json_global_##name;                                                                                \
             __section_json_global_##name = nullptr;                                                                             \

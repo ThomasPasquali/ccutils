@@ -2,6 +2,7 @@ import re
 from typing import Dict, List, Optional, Union
 from dataclasses import dataclass, field
 from pathlib import Path
+import json
 
 
 class ParserError(Exception):
@@ -29,6 +30,10 @@ class ParserPatterns:
     section_start: str = r'=\+=\+=\+= (?P<name>\S+) :: (?P<title>.+?) =\+=\+=\+='
     section_end: str = r'=\+=\+=\+= (?P<name>\S+) END =\+=\+=\+='
     
+    # Global JSON patterns
+    global_json_start: str = r'=-=-= (?P<name>\S+) =-=-='
+    global_json_end: str = r'=-=-= (?P<name>\S+) END =-=-='
+
     # MPI ALL PRINT patterns
     mpi_start: str = r'-\+-\+-\+- (?P<name>.+?) -\+-\+-\+-'
     mpi_end: str = r'-\+-\+-\+- (?P<name>.+?) END -\+-\+-\+-'
@@ -38,6 +43,8 @@ class ParserPatterns:
         """Compile all patterns for efficiency."""
         self.section_start_re = re.compile(self.section_start)
         self.section_end_re = re.compile(self.section_end)
+        self.global_json_start_re = re.compile(self.global_json_start)
+        self.global_json_end_re = re.compile(self.global_json_end)
         self.mpi_start_re = re.compile(self.mpi_start)
         self.mpi_end_re = re.compile(self.mpi_end)
         self.rank_block_re = re.compile(self.rank_block, re.DOTALL)
@@ -65,11 +72,16 @@ class Section:
     name: str
     title: str
     raw_text: str
+    json_data: Optional[Dict] = None
     mpi_all_prints: Dict[str, MPIAllPrint] = field(default_factory=dict)
     
     def get_mpi_print(self, name: str) -> Optional[MPIAllPrint]:
         """Get an MPI ALL PRINT by name."""
         return self.mpi_all_prints.get(name)
+    
+    def get_global_json(self) -> Optional[Dict]:
+        """Get the global JSON data if available."""
+        return self.json_data
     
     def list_mpi_prints(self) -> List[str]:
         """Get list of all MPI ALL PRINT names."""
@@ -126,65 +138,42 @@ class MPIOutputParser:
         return self.parse_string(content)
     
     def parse_string(self, content: str) -> Dict[str, Section]:
-        """
-        Parse MPI output from a string.
-        
-        Args:
-            content: String content to parse
-            
-        Returns:
-            Dictionary mapping section names to Section objects
-            
-        Raises:
-            ParserError: If content format is invalid
-        """
         sections = {}
         pos = 0
         
         while pos < len(content):
-            # Find next section start
             match = self.patterns.section_start_re.search(content, pos)
             if not match:
-                # No more sections
                 break
             
             section_name = match.group('name')
             section_title = match.group('title').strip()
             section_start_pos = match.end()
             
-            # Find corresponding section end
             end_match = self.patterns.section_end_re.search(content, section_start_pos)
             if not end_match:
-                raise SectionFormatError(
-                    f"Section '{section_name}' starting at position {match.start()} "
-                    "has no matching END marker"
-                )
+                raise SectionFormatError(f"Section '{section_name}' has no END marker")
             
-            end_name = end_match.group('name')
-            if end_name != section_name:
-                raise SectionFormatError(
-                    f"Section end name mismatch: expected '{section_name}', "
-                    f"got '{end_name}' at position {end_match.start()}"
-                )
-            
-            # Extract section content
             section_content = content[section_start_pos:end_match.start()]
             
-            # Parse MPI ALL PRINTs within this section and get unparsed content
-            mpi_prints, raw_text = self._parse_mpi_all_prints(section_content, section_name)
+            # Parse MPI ALL PRINTs
+            mpi_prints, section_content = self._parse_mpi_all_prints(section_content, section_name)
             
-            # Create section object
+            # Parse JSON block inside section
+            json_data, section_content = self._parse_json_block(section_content, section_name)
+            
+            raw_text = section_content.strip()
+            
             section = Section(
                 name=section_name,
                 title=section_title,
                 raw_text=raw_text,
-                mpi_all_prints=mpi_prints
+                mpi_all_prints=mpi_prints,
+                json_data=json_data
             )
             
             if section_name in sections:
-                raise SectionFormatError(
-                    f"Duplicate section name '{section_name}' found"
-                )
+                raise SectionFormatError(f"Duplicate section name '{section_name}'")
             
             sections[section_name] = section
             pos = end_match.end()
@@ -268,6 +257,24 @@ class MPIOutputParser:
         
         return mpi_prints, raw_text
     
+    def _parse_json_block(self, content: str, section_name: str) -> tuple[Optional[dict], str]:
+        match = self.patterns.global_json_start_re.search(content)
+        if not match:
+            return None, content
+        
+        end_match = self.patterns.global_json_end_re.search(content, match.end())
+        if not end_match:
+            raise ParserError(f"JSON block in section '{section_name}' has no END marker")
+        
+        json_text = content[match.end():end_match.start()].strip()
+        try:
+            parsed = json.loads(json_text)
+        except json.JSONDecodeError as e:
+            raise ParserError(f"Invalid JSON in section '{section_name}': {e}")
+        
+        new_content = content[:match.start()] + content[end_match.end():]
+        return parsed, new_content
+
     def _parse_rank_blocks(self, content: str, mpi_name: str, section_name: str) -> Dict[int, str]:
         """
         Parse rank blocks within an MPI ALL PRINT.

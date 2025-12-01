@@ -43,14 +43,15 @@
       fflush(stdout);                                                 \
     } while(0)
 
-  #define SECTION_END(name)                                        \
-    do {                                                           \
-      if(!__section_json_##name.empty()) {                         \
-        printf("ccutils_json\n");                                  \
-        printf("%s\n", __section_json_##name.dump().c_str());      \
-      }                                                            \
-      printf(CCUTILS_FMT_SECTION_END, #name);                   \
-      fflush(stdout);                                              \
+  #define SECTION_END(name)                                         \
+    do {                                                            \
+      if(!__section_json_##name.empty()) {                          \
+        printf(CCUTILS_FMT_GLOBAL_JSON_START, "ccutils_json");      \
+        printf("%s\n", __section_json_##name.dump().c_str());       \
+        printf(CCUTILS_FMT_GLOBAL_JSON_END, "ccutils_json");        \
+      }                                                             \
+      printf(CCUTILS_FMT_SECTION_END, #name);                       \
+      fflush(stdout);                                               \
     } while(0)
 
   #define SECTION_JSON_PUT(name, key, value) \
