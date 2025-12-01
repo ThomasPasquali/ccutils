@@ -7,13 +7,14 @@
 #include "../formats.h"
 #include "../macros.h"
 
-#define MPI_PRINT_ONCE(print_statement) {           \
-    int inmacro_myid;                               \
-    MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
-    if (inmacro_myid == 0) {                        \
-        print_statement;                            \
-    }                                               \
-}
+#define MPI_PRINT_ONCE(print_statement)                 \
+    do {                                                \
+        int inmacro_myid;                               \
+        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
+        if (inmacro_myid == 0) {                        \
+            print_statement;                            \
+        }                                               \
+    } while(0)
 
 #define MPI_PRINTF_ONCE(fmt, ...)                   \
     MPI_PRINT_ONCE(printf(fmt, ##__VA_ARGS__))      
@@ -22,10 +23,10 @@
 // @param PRINTS_CODE_BLOCK A user-defined code block that prints per-rank information.
 //
 // IMPORTANT: for your prints use `fprintf(fp, ...);`. This will ensure the print is redirected to the correct file descriptor.
-#define MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                    \
-    MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name);) \
-    MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                            \
-    MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name);) \
+#define MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                        \
+    MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name););    \
+    MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                                \
+    MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name););    \
   }
 
 // @param PRINTS_CODE_BLOCK A user-defined code block that prints per-rank information.
@@ -116,12 +117,63 @@
   } while(0);
 
 
-// Sections
-#define MPI_SECTION_DEF(name, title) \
-    MPI_PRINT_ONCE(SECTION_DEF(name, title))
+#ifndef CCUTILS_NO_JSON
+  // Declare a global JSON only on rank 0
+  #define DECLARE_JSON(name)                                    \
+      int inmacro_myid;                                         \
+      MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);             \
+      nlohmann::json __section_json_##name;                     \
+      nlohmann::json* __section_json_global_##name = nullptr;   \
+      if (inmacro_myid == 0) {                                  \
+          __section_json_global_##name = new nlohmann::json();  \
+      }
 
-#define MPI_SECTION_END(name) \
-    MPI_PRINT_ONCE(SECTION_END(name))
+    #define MPI_GLOBAL_JSON_PUT(name, key, value)                   \
+        if (inmacro_myid == 0) {                                    \
+            (*__section_json_global_##name)[key] = value;           \
+        }
+
+    #define MPI_LOCAL_JSON_PUT(name, key, value)        \
+        __section_json_##name[key] = value; 
+#else
+  #define DECLARE_LOCAL_JSON(name)
+  #define DECLARE_GLOBAL_JSON(name)
+#endif
+
+
+#define MPI_SECTION_DEF(name, title)            \
+    DECLARE_JSON(name)                          \
+    MPI_PRINT_ONCE(SECTION_DEF(name, title));
+
+#ifndef CCUTILS_NO_JSON
+#define MPI_SECTION_END(name)                                                                                                   \
+    do {                                                                                                                        \
+        int inmacro_myid;                                                                                                       \
+        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                                                                           \
+                                                                                                                                \
+        if (!__section_json_##name.empty())                                                                                     \
+            MPI_ALL_PRINT_NAMED(ccutils_rank_json, fprintf(fp, "%s\n", __section_json_##name.dump().c_str()))                 \
+        /* Only rank 0 prints SECTION_END */                                                                                    \
+        if (inmacro_myid == 0) __section_json_##name.clear();                                                                   \
+        if (__section_json_global_##name && !__section_json_global_##name->empty()) {                                           \
+            printf("ccutils_json\n");                                                                                           \
+            printf("%s\n", __section_json_global_##name->dump().c_str());                                                       \
+            fflush(stdout);                                                                                                     \
+            delete __section_json_global_##name;                                                                                \
+            __section_json_global_##name = nullptr;                                                                             \
+        }                                                                                                                       \
+        MPI_PRINT_ONCE(SECTION_END(name));                                                                                      \
+    } while(0)
+#else
+#define MPI_SECTION_END(name)                                               \
+    do {                                                                    \
+        int inmacro_myid;                                                   \
+        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                       \
+                                                                            \
+        /* Only rank 0 prints SECTION_END */                                \
+        MPI_PRINT_ONCE(SECTION_END(name));                                  \
+    } while(0)
+#endif
 
 // Misc
 #define MPI_STATUS_CHECK(NREQ, STATV, COMM) \

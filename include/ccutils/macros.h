@@ -7,6 +7,7 @@
   #include <string>
 #endif
 #include "colors.h"
+#include "formats.h"
 
 // Math
 #define CEILING(x,y) (((x) + (y) - 1) / (y))
@@ -35,12 +36,11 @@
       printf(CCUTILS_FMT_SECTION_END, #name);
 #else 
   // TODO fix and test
-  #define SECTION_DEF(name, title)                                   \
-    nlohmann::json __section_json_##name;                            \
-    do {                                                             \
-      printf("ccutils_section_%s_start\n", #name);                   \
-      if (std::string(title) != "") printf("Title: %s\n", title);    \
-      fflush(stdout);                                                \
+  #define SECTION_DEF(name, title)                                    \
+    nlohmann::json __section_json_##name;                             \
+    do {                                                              \
+      printf(CCUTILS_FMT_SECTION_START, #name, title);                \
+      fflush(stdout);                                                 \
     } while(0)
 
   #define SECTION_END(name)                                        \
@@ -49,7 +49,7 @@
         printf("ccutils_json\n");                                  \
         printf("%s\n", __section_json_##name.dump().c_str());      \
       }                                                            \
-      printf("ccutils_section_%s_end\n", #name);                   \
+      printf(CCUTILS_FMT_SECTION_END, #name);                   \
       fflush(stdout);                                              \
     } while(0)
 
