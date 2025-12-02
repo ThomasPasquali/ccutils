@@ -69,9 +69,9 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     
     # Install nlohmann_json headers for classic Makefile projects
     # Get the source directory of the fetched nlohmann_json
-    FetchContent_GetProperties(json)
-    if(json_POPULATED)
-        install(DIRECTORY ${json_SOURCE_DIR}/include/
+    FetchContent_GetProperties(nlohmann_json)
+    if(nlohmann_json_POPULATED)
+        install(DIRECTORY ${nlohmann_json_SOURCE_DIR}/include/
                 DESTINATION include
                 FILES_MATCHING PATTERN "*.hpp")
     endif()
