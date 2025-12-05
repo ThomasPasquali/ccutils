@@ -14,6 +14,7 @@
         if (inmacro_myid == 0) {                        \
             print_statement;                            \
         }                                               \
+        FLUSH_WAIT(200000)                              \
     } while(0);
 
 #define MPI_PRINTF_ONCE(fmt, ...)                   \
@@ -27,6 +28,7 @@
     MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))    \
     MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                              \
     MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name))    \
+    FLUSH_WAIT(200000)                                                            \
   }
 
 // @param PRINTS_CODE_BLOCK A user-defined code block that prints per-rank information.
@@ -51,11 +53,11 @@
             int error;                                                               \
             sprintf(s1, "cat ccutils_temp_%d.txt", inmacro_myid);                    \
             error = system(s1);                                                      \
-            if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                      \
+            if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not cat tmp file.");       \
             sprintf(s1, "rm ccutils_temp_%d.txt", inmacro_myid);                     \
             error = system(s1);                                                      \
-            if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                      \
+            if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not rm tmp file.");        \
         }                                                                            \
         MPI_Barrier(MPI_COMM_WORLD);                                                 \
@@ -111,9 +113,10 @@
 
 // Flushes stdout and sleeps for `useconds` microseconds. 1000000 == 1 second
 #define FLUSH_WAIT(useconds) \
-  do { \
-      fflush(stdout); \
-      usleep(useconds); \
+  do {                       \
+      fflush(stdout);        \
+      fflush(stderr);        \
+      usleep(useconds);      \
   } while(0);
 
 
