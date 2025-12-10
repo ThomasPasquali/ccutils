@@ -1,5 +1,6 @@
 #ifndef __CCUTILS_CUDA_MACROS__
 #define __CCUTILS_CUDA_MACROS__
+
 #ifndef CCUTILS_ENABLE_CUDA
 #error "ccutils CUDA headers require -DCCUTILS_ENABLE_CUDA"
 #endif
@@ -7,8 +8,11 @@
 #include <stdint.h>
 #include "../formats.h"
 
-// CUDA
-#define CUDA_CHECK(call) {                                             \
+/**********************************************************************/
+/*                            CUDA ERROR CHECK                          */
+/**********************************************************************/
+
+#define CCUTILS_CUDA_CHECK(call) {                                             \
   cudaError_t err = call;                                              \
   if (err != cudaSuccess) {                                            \
     fprintf(stderr, "CUDA error in file '%s' in line %i : %s (%u)\n",  \
@@ -16,9 +20,9 @@
     exit(err);                                                         \
   }                                                                    \
 }
-#define CHECK_CUDA(call) CUDA_CHECK(call)
+#define CCUTILS_CHECK_CUDA(call) CCUTILS_CUDA_CHECK(call)
 
-#define CUDA_CHECK_SOFT(call) {                                                 \
+#define CCUTILS_CUDA_CHECK_SOFT(call) {                                                 \
   cudaError_t err = call;                                                       \
   if (err == cudaErrorMemoryAllocation) {                                       \
     fprintf(stderr, "CUDA OUT OF MEMORY in file '%s' in line %i : %s (%u)\n",   \
@@ -32,21 +36,31 @@
   }                                                                             \
 }
 
-#define ASSERT_CUDA(cond, msg, ...) \
+/**********************************************************************/
+/*                            CUDA ASSERTIONS                             */
+/**********************************************************************/
+
+#define CCUTILS_ASSERT_CUDA(cond, msg, ...) \
   if (!(cond)) { \
     printf(BRIGHT_RED "Assertion in %s on line %i failed: " msg RESET, __FILE__, __LINE__, ##__VA_ARGS__); \
     return; \
   }
-#define CUDA_ASSERT(call) ASSERT_CUDA(call)
+#define CCUTILS_CUDA_ASSERT(call) CCUTILS_ASSERT_CUDA(call)
 
-#define CUDA_FREE_SAFE(buf) do { \
+/**********************************************************************/
+/*                           CUDA MEMORY UTILS                            */
+/**********************************************************************/
+
+#define CCUTILS_CUDA_FREE_SAFE(buf) do { \
   if (buf != nullptr) cudaFree(buf); \
 } while (0)
 
+/**********************************************************************/
+/*                          cuSPARSE CHECK                               */
+/**********************************************************************/
 
-// TODO CUSPARSE documentation
 #if defined(CCUTILS_ENABLE_CUSPARSE) && (CCUTILS_ENABLE_CUSPARSE > 0)
-    #define CUSPARSE_CHECK(call) do {                                    \
+    #define CCUTILS_CUDA_CUSPARSE_CHECK(call) do {                                    \
         cusparseStatus_t err = call;                                     \
         if (err != CUSPARSE_STATUS_SUCCESS) {                            \
             fprintf(stderr, "cuSPARSE error in file '%s' in line %i : %s.\n", \
@@ -56,14 +70,16 @@
     } while(0)
 #endif
 
+/**********************************************************************/
+/*                           NVTX PROFILING                              */
+/**********************************************************************/
 
-// TODO NVTX documentation
 #if defined(CCUTILS_ENABLE_NVTX) && (CCUTILS_ENABLE_NVTX > 0)
     #include <nvtx3/nvToolsExt.h>
-    // Colors:                  Green,      Blue,       Yellow,     Magenta,    Cyan,       Red,        White
     const uint32_t colors[] = { 0xff00ff00, 0xff0000ff, 0xffffff00, 0xffff00ff, 0xff00ffff, 0xffff0000, 0xffffffff };
     const int num_colors = sizeof(colors)/sizeof(uint32_t);
-    #define NVTX_PUSH_RANGE(name,cid) { \
+
+    #define CCUTILS_CUDA_NVTX_PUSH_RANGE(name,cid) { \
         int color_id = cid; \
         color_id = color_id%num_colors;\
         nvtxEventAttributes_t eventAttrib = {0}; \
@@ -75,9 +91,10 @@
         eventAttrib.message.ascii = name; \
         nvtxRangePushEx(&eventAttrib); \
     }
-    #define NVTX_POP_RANGE nvtxRangePop();
+    #define CCUTILS_CUDA_NVTX_POP_RANGE nvtxRangePop();
+
     #include <nvtx3/nvToolsExtCuda.h>
-    #define NVTX_PUSH_RANGE_CUDA(name,cid,stream) { \
+    #define CCUTILS_CUDA_NVTX_PUSH_RANGE(name,cid,stream) { \
         int color_id = cid; \
         color_id = color_id % num_colors; \
         nvtxEventAttributes_t eventAttrib = {0}; \
@@ -91,9 +108,8 @@
         nvtxRangePushEx(&eventAttrib); \
     }
 #else
-    #define NVTX_PUSH_RANGE(name,cid)
-    #define NVTX_POP_RANGE
+    #define CCUTILS_CUDA_NVTX_PUSH_RANGE(name,cid)
+    #define CCUTILS_CUDA_NVTX_POP_RANGE
 #endif
-
 
 #endif
