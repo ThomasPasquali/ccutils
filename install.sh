@@ -7,6 +7,7 @@ set -euo pipefail
 
 INSTALL_PREFIX="$HOME/.local"
 PKG_DIR="$INSTALL_PREFIX/share/ccutils"
+INSTALL_DIR="$INSTALL_PREFIX/ccutils/install"
 
 REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
 
@@ -73,6 +74,11 @@ ensure_line_present() {
 #####################################
 # USER OPTIONS: CUDA / MPI
 #####################################
+if [ -t 0 ]; then
+    # Force interactive input even when piped
+    exec </dev/tty
+fi
+
 
 echo "--------- ccutils Installation Options ---------"
 ENABLE_CUDA=OFF
@@ -113,14 +119,13 @@ cd "$PKG_DIR"
 echo "[3] Configuring CMake..."
 cmake -B build -S . \
     -DCCUTILS_ENABLE_CUDA="$ENABLE_CUDA" \
-    -DCCUTILS_ENABLE_MPI="$ENABLE_MPI" \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"
+    -DCCUTILS_ENABLE_MPI="$ENABLE_MPI"
 
 echo "[4] Building..."
-cmake --build build --parallel
+cmake --build build --parallel 
 
-echo "[5] Installing to $INSTALL_PREFIX ..."
-cmake --install build --prefix "$INSTALL_PREFIX/ccutils/install"
+echo "[5] Installing to $INSTALL_DIR ..."
+cmake --install build --prefix "$INSTALL_DIR"
 
 #####################################
 # ENVIRONMENT UPDATES
@@ -133,11 +138,10 @@ RC_FILE=$(detect_shell_rc)
 echo "Using RC file: $RC_FILE"
 
 # Update CMAKE_PREFIX_PATH
-# TODO double check if the path works
 ensure_line_present "$RC_FILE" \
-"export CMAKE_PREFIX_PATH=\"$INSTALL_PREFIX/ccutils/lib/cmake:\$CMAKE_PREFIX_PATH\""
+"export CMAKE_PREFIX_PATH=\"$INSTALL_DIR/lib/cmake/ccutils:\$CMAKE_PREFIX_PATH\""
 ensure_line_present "$RC_FILE" \
-"export CCUTILS_INCLUDE=\"$INSTALL_PREFIX/ccutils/install/include\""
+"export CCUTILS_INCLUDE=\"$INSTALL_DIR/include/ccutils\""
 
 echo
 echo "Installation complete."
