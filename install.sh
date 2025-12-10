@@ -18,15 +18,28 @@ REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
 ask_yes_no() {
     local prompt="$1"
     local default="${2:-y}"
+    local answer=""
 
-    local choice
-    read -rp "$prompt [y/n] (default: $default): " choice
-    choice="${choice:-$default}"
+    if [ -t 0 ]; then
+        # stdin is a TTY → fully interactive
+        read -rp "$prompt [y/n] (default: $default): " answer
+    else
+        # piped install → try to read from /dev/tty
+        if [ -e /dev/tty ]; then
+            read -rp "$prompt [y/n] (default: $default): " answer < /dev/tty
+        else
+            echo
+            echo "No interactive terminal detected — defaulting to '$default'"
+            answer="$default"
+        fi
+    fi
 
-    case "$choice" in
+    answer="${answer:-$default}"
+
+    case "$answer" in
         [Yy]*) return 0 ;;
         [Nn]*) return 1 ;;
-        *) echo "Invalid input. Assuming $default." ; [[ "$default" == "y" ]] ;;
+        *) return 0 ;; # default
     esac
 }
 
@@ -74,11 +87,6 @@ ensure_line_present() {
 #####################################
 # USER OPTIONS: CUDA / MPI
 #####################################
-if [ -t 0 ]; then
-    # Force interactive input even when piped
-    exec </dev/tty
-fi
-
 
 echo "--------- ccutils Installation Options ---------"
 ENABLE_CUDA=OFF

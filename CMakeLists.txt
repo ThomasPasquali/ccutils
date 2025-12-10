@@ -26,7 +26,7 @@ target_link_libraries(ccutils INTERFACE nlohmann_json::nlohmann_json)
 
 # ---------------- CUDA package ----------------
 if(CCUTILS_ENABLE_CUDA)
-    message("CCUTILS: Enabling CUDA module")
+    message(STATUS "CCUTILS: Enabling CUDA module")
     enable_language(CUDA)
     add_library(ccutils_cuda INTERFACE)
     target_include_directories(ccutils_cuda INTERFACE
@@ -40,7 +40,7 @@ endif()
 
 # ---------------- MPI package ----------------
 if(CCUTILS_ENABLE_MPI)
-    message("CCUTILS: Enabling MPI module")
+    message(STATUS "CCUTILS: Enabling MPI module")
     find_package(MPI REQUIRED)  # Provides MPI::MPI_C and MPI::MPI_CXX
     add_library(ccutils_mpi INTERFACE)
     target_include_directories(ccutils_mpi INTERFACE
