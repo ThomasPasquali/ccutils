@@ -6,12 +6,28 @@ set -euo pipefail
 #####################################
 
 INSTALL_PREFIX="$HOME/.local"
-PKG_DIR="$INSTALL_PREFIX/ccutils"
+PKG_DIR="$INSTALL_PREFIX/share/ccutils"
+
 REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
 
 #####################################
 # FUNCTIONS
 #####################################
+
+ask_yes_no() {
+    local prompt="$1"
+    local default="${2:-y}"
+
+    local choice
+    read -rp "$prompt [y/n] (default: $default): " choice
+    choice="${choice:-$default}"
+
+    case "$choice" in
+        [Yy]*) return 0 ;;
+        [Nn]*) return 1 ;;
+        *) echo "Invalid input. Assuming $default." ; [[ "$default" == "y" ]] ;;
+    esac
+}
 
 detect_shell_rc() {
     local shell_name rc
@@ -55,6 +71,29 @@ ensure_line_present() {
 }
 
 #####################################
+# USER OPTIONS: CUDA / MPI
+#####################################
+
+echo "--------- ccutils Installation Options ---------"
+ENABLE_CUDA=OFF
+ENABLE_MPI=OFF
+
+if ask_yes_no "Enable CUDA support?" n; then
+    ENABLE_CUDA=ON
+fi
+
+if ask_yes_no "Enable MPI support?" n; then
+    ENABLE_MPI=ON
+fi
+
+echo
+echo "Selected options:"
+echo "  CUDA: $ENABLE_CUDA"
+echo "  MPI : $ENABLE_MPI"
+echo "------------------------------------------------"
+echo
+
+#####################################
 # INSTALLATION
 #####################################
 
@@ -73,15 +112,15 @@ cd "$PKG_DIR"
 
 echo "[3] Configuring CMake..."
 cmake -B build -S . \
-    -DCCUTILS_ENABLE_CUDA=ON \
-    -DCCUTILS_ENABLE_MPI=ON \
+    -DCCUTILS_ENABLE_CUDA="$ENABLE_CUDA" \
+    -DCCUTILS_ENABLE_MPI="$ENABLE_MPI" \
     -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"
 
 echo "[4] Building..."
 cmake --build build --parallel
 
 echo "[5] Installing to $INSTALL_PREFIX ..."
-cmake --install build --prefix "$INSTALL_PREFIX/install"
+cmake --install build --prefix "$INSTALL_PREFIX/ccutils/install"
 
 #####################################
 # ENVIRONMENT UPDATES
@@ -94,10 +133,11 @@ RC_FILE=$(detect_shell_rc)
 echo "Using RC file: $RC_FILE"
 
 # Update CMAKE_PREFIX_PATH
+# TODO double check if the path works
 ensure_line_present "$RC_FILE" \
-"export CMAKE_PREFIX_PATH=\"$INSTALL_PREFIX:\$CMAKE_PREFIX_PATH\""
+"export CMAKE_PREFIX_PATH=\"$INSTALL_PREFIX/ccutils/lib/cmake:\$CMAKE_PREFIX_PATH\""
 ensure_line_present "$RC_FILE" \
-"export CCUTILS_INCLUDE=\"$INSTALL_PREFIX/install/include\""
+"export CCUTILS_INCLUDE=\"$INSTALL_PREFIX/ccutils/install/include\""
 
 echo
 echo "Installation complete."

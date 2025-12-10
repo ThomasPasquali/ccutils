@@ -22,7 +22,8 @@ Organized into optional packages:
 > Currently, CMake is required for installation.
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | bash
+# If needed, change the branch name
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash
 ```
 
 If you prefer to install *CCUTILS* manually, please refer to [docs/INSTALL.md](docs/INSTALL.md)

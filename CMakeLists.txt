@@ -13,7 +13,6 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.10.5
 )
-# GIT_TAG v3.12.0
 FetchContent_MakeAvailable(nlohmann_json)
 message(STATUS "Done!")
 
