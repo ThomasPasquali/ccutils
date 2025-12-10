@@ -186,6 +186,22 @@
     } while(0);
 #endif
 
+// MPI + CUDA
+#ifdef CCUTILS_ENABLE_CUDA
+    #define CUDA_PRINT_DEVICE {                                             \
+        int inmacro_myid;                                                   \
+        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                       \
+        int dev;                                                            \
+        cudaError_t err = cudaGetDevice(&dev);                              \
+        if (err == cudaSuccess) {                                           \
+            printf("[[Rank %d]] CUDA device: %d\n", inmacro_myid, dev);     \
+        } else {                                                            \
+            printf("cudaGetDevice failed: %s\n", cudaGetErrorString(err));  \
+        }                                                                   \
+    }
+#endif
+
+
 // Misc
 #define MPI_STATUS_CHECK(NREQ, STATV, COMM) \
     for (int i = 0; i < NREQ; i++) { \

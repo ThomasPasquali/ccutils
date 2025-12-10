@@ -5,6 +5,7 @@
 #endif
 
 #include <stdint.h>
+#include "../formats.h"
 
 // CUDA
 #define CUDA_CHECK(call) {                                             \
@@ -39,7 +40,7 @@
 #define CUDA_ASSERT(call) ASSERT_CUDA(call)
 
 #define CUDA_FREE_SAFE(buf) do { \
-    if (buf != nullptr) cudaFree(buf); \
+  if (buf != nullptr) cudaFree(buf); \
 } while (0)
 
 
