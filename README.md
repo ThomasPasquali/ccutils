@@ -16,14 +16,16 @@ Organized into optional packages:
 - `ccutils_cuda` (requires CUDA, enable with `-DCCUTILS_ENABLE_CUDA=ON`)
 - `ccutils_mpi` (requires MPI, enable with `-DCCUTILS_ENABLE_MPI=ON`)
 
-## Quick Installation
+## Quick Installation (or Update)
+
+> [!IMPORTANT]
+> Currently, CMake is required for installation.
 
 ```bash
-# FIXME
-wget .... | bash
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | bash
 ```
 
-If you prefer ot install manually, please refer to [docs/INSTALL.md](docs/INSTALL.md)
+If you prefer to install *CCUTILS* manually, please refer to [docs/INSTALL.md](docs/INSTALL.md)
 
 ## Examples
 
