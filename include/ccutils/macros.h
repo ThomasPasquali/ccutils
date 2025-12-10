@@ -55,7 +55,10 @@
     } while(0)
 
   #define SECTION_JSON_PUT(name, key, value) \
-      __section_json_##name[key] = value
+      __section_json_##name[key] = value;
+
+  #define SECTION_JSON_SUB_PUT(name, key1, key2, value) \
+    (__section_json_##name[key1][key2] = (value));
 
   // #define SECTION_DEF_GLOBAL(name)                                       \
   //     struct __section_##name##_t {                                      \
