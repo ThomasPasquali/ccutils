@@ -4,6 +4,8 @@
 #error "ccutils MPI headers require -DCCUTILS_ENABLE_MPI"
 #endif
 
+#include <unistd.h>
+
 #include "../formats.h"
 #include "../macros.h"
 
