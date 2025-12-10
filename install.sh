@@ -10,6 +10,8 @@ PKG_DIR="$INSTALL_PREFIX/share/ccutils"
 INSTALL_DIR="$INSTALL_PREFIX/ccutils/install"
 
 REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
+# FIXME set to main
+REPO_BRANCH="ccutils_json"
 
 #####################################
 # FUNCTIONS
@@ -116,7 +118,7 @@ mkdir -p "$PKG_DIR"
 
 echo "[2] Cloning or updating repository..."
 if [ ! -d "$PKG_DIR/.git" ]; then
-    git clone "$REPO_URL" "$PKG_DIR"
+    git clone -b "$REPO_BRANCH" "$REPO_URL" "$PKG_DIR"
 else
     echo "Repository already exists. Pulling latest changes..."
     git -C "$PKG_DIR" pull --rebase
