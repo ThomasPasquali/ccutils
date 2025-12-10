@@ -7,6 +7,15 @@
 #include "../formats.h"
 #include "../macros.h"
 
+#define MPI_ONCE(statement)                             \
+    do {                                                \
+        int inmacro_myid;                               \
+        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
+        if (inmacro_myid == 0) {                        \
+            statement;                                  \
+        }                                               \
+    } while(0);
+
 #define MPI_PRINT_ONCE(print_statement)                 \
     do {                                                \
         int inmacro_myid;                               \
