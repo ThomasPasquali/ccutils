@@ -1,59 +1,27 @@
-### CPU Example
+# Timers
+
+From the `examples` directory:
 
 ```bash
-# Install ccutils in `./install`
-cmake -B build -S .
-cmake --build build
-cmake --install build --prefix ./install
-
-cd examples/cpu
+# Install CCUTILS on the system
+# If needed, change the branch name
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash
 
 # Using CMake
-cmake -B build -S .
-cmake --build build
-./build/cpu_timers
+cmake -B build
+# If you want to include CUDA and MPI:
+cmake -B build -DWITH_CUDA=ON -DWITH_MPI=ON
+cmake --build build -t timers
 
-# Using Makefile
-make
-./cpu_timers
-```
+# OR Using Makefile
+make timers
+# If you want to include CUDA and MPI:
+make WITH_MPI=1 WITH_CUDA=1 timers
+mkdir -p build
+mv timers build
 
-### CUDA Example
-
-```bash
-# Install ccutils in `./install` enabling CUDA
-cmake -B build -S . -DCCUTILS_ENABLE_CUDA=ON
-cmake --build build
-cmake --install build --prefix ./install
-
-cd examples/cuda
-
-# Using CMake
-cmake -B build -S .
-cmake --build build
-./build/cuda_example
-
-# Using Makefile
-make
-./cuda_example
-```
-
-### MPI Example
-
-```bash
-# Install ccutils in `./install` enabling CUDA
-cmake -B build -S . -DCCUTILS_ENABLE_MPI=ON
-cmake --build build
-cmake --install build --prefix ./install
-
-cd examples/mpi
-
-# Using CMake
-cmake -B build -S .
-cmake --build build
-mpirun -n 4 ./build/mpi_example
-
-# Using Makefile
-make
-mpirun -n 4 ./build/mpi_example
+# Run (normal)
+./build/timers
+# Run (MPI)
+mpirun -np 2 ./build/timers
 ```

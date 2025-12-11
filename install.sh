@@ -155,7 +155,7 @@ echo "Using RC file: $RC_FILE"
 ensure_line_present "$RC_FILE" \
 "export CMAKE_PREFIX_PATH=\"$INSTALL_DIR/lib/cmake/ccutils:\$CMAKE_PREFIX_PATH\""
 ensure_line_present "$RC_FILE" \
-"export CCUTILS_INCLUDE=\"$INSTALL_DIR/include/ccutils\""
+"export CCUTILS_INCLUDE=\"$INSTALL_DIR/include\""
 ensure_line_present "$RC_FILE" \
 "export PATH=\"$INSTALL_BIN:\$PATH\""
 
