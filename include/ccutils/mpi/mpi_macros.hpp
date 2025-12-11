@@ -33,20 +33,20 @@
     } while(0);
 
 #define CCUTILS_MPI_PRINTF_ONCE(fmt, ...)                   \
-    MPI_PRINT_ONCE(printf(fmt, ##__VA_ARGS__))
+    CCUTILS_MPI_PRINT_ONCE(printf(fmt, ##__VA_ARGS__))
 
 /**********************************************************************/
 /*                        MPI ALL PRINT MACROS                          */
 /**********************************************************************/
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                      \
-    MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))    \
-    MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                              \
-    MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name))    \
-    FLUSH_WAIT(200000)                                                            \
+    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))    \
+    CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                              \
+    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name))    \
+    FLUSH_WAIT(200000)                                                                    \
   }
 
-#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK) {                                           \
+#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK) {                                   \
     int inmacro_myid, inmacro_ntask;                                                 \
     MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                                    \
     MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                   \

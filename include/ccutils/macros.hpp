@@ -49,14 +49,14 @@
       printf(CCUTILS_FMT_SECTION_END, #name);
 #else 
   // TODO fix and test
-  #define CCUTILS_SECTION_DEF(name, title)                                    \
+  #define CCUTILS_SECTION_DEF(name, title)                            \
     nlohmann::json __section_json_##name;                             \
     do {                                                              \
       printf(CCUTILS_FMT_SECTION_START, #name, title);                \
       fflush(stdout);                                                 \
     } while(0);
 
-  #define CCUTILS_SECTION_END(name)                                         \
+  #define CCUTILS_SECTION_END(name)                                 \
     do {                                                            \
       if(!__section_json_##name.empty()) {                          \
         printf(CCUTILS_FMT_GLOBAL_JSON_START, "ccutils_json");      \
@@ -77,7 +77,7 @@
 
 
 /**********************************************************************/
-/*                           SECTION TIMERS                            */
+/*                           SECTION TIMERS                           */
 /**********************************************************************/
 
 #define CCUTILS_SECTION_TIMER_DEF(section_name, timer_name) \
