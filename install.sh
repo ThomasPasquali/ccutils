@@ -8,6 +8,7 @@ set -euo pipefail
 INSTALL_PREFIX="$HOME/.local"
 PKG_DIR="$INSTALL_PREFIX/share/ccutils"
 INSTALL_DIR="$INSTALL_PREFIX/ccutils/install"
+INSTALL_BIN="$INSTALL_PREFIX/bin"
 
 REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
 # FIXME set to main
@@ -119,7 +120,7 @@ RESET="\033[0m"
 echo -e "${GREEN}[1] Creating installation directory at $PKG_DIR ...${RESET}"
 mkdir -p "$PKG_DIR"
 
-echo "${GREEN}[2] Cloning or updating repository...${RESET}"
+echo -e "${GREEN}[2] Cloning or updating repository...${RESET}"
 if [ ! -d "$PKG_DIR/.git" ]; then
     git clone -b "$REPO_BRANCH" "$REPO_URL" "$PKG_DIR"
 else
@@ -129,22 +130,22 @@ fi
 
 cd "$PKG_DIR"
 
-echo "${GREEN}[3] Configuring CMake...${RESET}"
+echo -e "${GREEN}[3] Configuring CMake...${RESET}"
 cmake -B build -S . \
     -DCCUTILS_ENABLE_CUDA="$ENABLE_CUDA" \
     -DCCUTILS_ENABLE_MPI="$ENABLE_MPI"
 
-echo "${GREEN}[4] Building...${RESET}"
+echo -e "${GREEN}[4] Building...${RESET}"
 cmake --build build --parallel 
 
-echo "${GREEN}[5] Installing to $INSTALL_DIR ...${RESET}"
+echo -e "${GREEN}[5] Installing to $INSTALL_DIR ...${RESET}"
 cmake --install build --prefix "$INSTALL_DIR"
 
 #####################################
 # ENVIRONMENT UPDATES
 #####################################
 
-echo "${GREEN}[6] Updating shell configuration...${RESET}"
+echo -e "${GREEN}[6] Updating shell configuration...${RESET}"
 
 RC_FILE=$(detect_shell_rc)
 
@@ -155,9 +156,20 @@ ensure_line_present "$RC_FILE" \
 "export CMAKE_PREFIX_PATH=\"$INSTALL_DIR/lib/cmake/ccutils:\$CMAKE_PREFIX_PATH\""
 ensure_line_present "$RC_FILE" \
 "export CCUTILS_INCLUDE=\"$INSTALL_DIR/include/ccutils\""
+ensure_line_present "$RC_FILE" \
+"export PATH=\"$INSTALL_BIN:\$PATH\""
+
+# Add updater command to PATH
+cd "$INSTALL_BIN"
+wget "https://raw.githubusercontent.com/ThomasPasquali/ccutils/${REPO_BRANCH}/install.sh"
+mv install.sh ccutils-upgrade
+chmod +x ccutils-upgrade
 
 echo
-echo "${GREEN}Installation complete."
-echo "To activate changes, run:${RESET}"
+echo -e "${GREEN}Installation complete."
+echo -e "To activate changes, run:${RESET}"
 echo "    source \"$RC_FILE\""
+echo
+echo -e "${GREEN}To upgrade CCUTILS, run:${RESET}"
+echo "    ccutils-upgrade"
 echo
