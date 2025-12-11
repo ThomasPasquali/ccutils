@@ -42,12 +42,14 @@ endif()
 if(CCUTILS_ENABLE_MPI)
     message(STATUS "CCUTILS: Enabling MPI module")
     find_package(MPI REQUIRED)  # Provides MPI::MPI_C and MPI::MPI_CXX
+    message(STATUS "MPI include dirs: ${MPI_CXX_INCLUDE_DIRS}")
+    message(STATUS "MPI CXX libraries: ${MPI_CXX_LIBRARIES}")
     add_library(ccutils_mpi INTERFACE)
     target_include_directories(ccutils_mpi INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
     )
-    target_link_libraries(ccutils_mpi INTERFACE MPI::MPI_C MPI::MPI_CXX nlohmann_json::nlohmann_json)
+    target_link_libraries(ccutils_mpi INTERFACE MPI::MPI_CXX nlohmann_json::nlohmann_json)
     target_compile_definitions(ccutils_mpi INTERFACE CCUTILS_ENABLE_MPI)
 endif()
 
