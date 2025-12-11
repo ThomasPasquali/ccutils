@@ -7,8 +7,8 @@
 
 #include <cuda_runtime.h>
 #include <stdint.h>
-#include "cuda_macros.h"
-#include "../macros.h"
+#include "cuda_macros.hpp"
+#include "../macros.hpp"
 
 /**********************************************************************/
 /*                       DEVICE → HOST COPY                              */

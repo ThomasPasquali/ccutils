@@ -6,8 +6,8 @@
 #endif
 
 #include <cuda_runtime.h>
-#include "cuda_macros.h"
-#include "../timers.h"
+#include "cuda_macros.hpp"
+#include "../timers.hpp"
 
 /**********************************************************************/
 /*                          CUDA TIMER DEFINITION                       */

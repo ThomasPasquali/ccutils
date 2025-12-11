@@ -7,7 +7,7 @@
 
 #include <unistd.h>
 #include "../formats.h"
-#include "../macros.h"
+#include "../macros.hpp"
 
 /**********************************************************************/
 /*                        MPI ONCE MACROS                              */

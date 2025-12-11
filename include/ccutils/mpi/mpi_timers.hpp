@@ -5,7 +5,7 @@
 #error "ccutils MPI headers require -DCCUTILS_ENABLE_MPI"
 #endif
 
-#include <ccutils/timers.h>
+#include <ccutils/timers.hpp>
 #include <mpi.h>
 #include <vector>
 #include <iostream>
