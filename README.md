@@ -23,13 +23,14 @@ Organized into optional packages:
 
 ```bash
 # If needed, change the branch name
-wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/ccutils_json/install.sh | env bash
 ```
 
 If you prefer to install *CCUTILS* manually, please refer to [docs/INSTALL.md](docs/INSTALL.md)
 
 ## Examples
 
+* Compile: [CMake](examples/CMakeLists.txt) or [Makefile](examples/Makefile)
 * [Timers](docs/examples/TIMERS.md)
 * [Prints](docs/examples/PRINTS.md) + [Python Parser](docs/examples/PARSER.md)
 * [Cuda-Specific](docs/examples/CUDA_MACROS.md)
