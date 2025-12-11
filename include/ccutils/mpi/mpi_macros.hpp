@@ -10,10 +10,21 @@
 #include "../macros.hpp"
 
 /**********************************************************************/
+/*                           FLUSH UTILITY                            */
+/**********************************************************************/
+
+#define CCUTILS_FLUSH_WAIT(useconds) \
+  do {                       \
+      fflush(stdout);        \
+      fflush(stderr);        \
+      usleep(useconds);      \
+  } while(0);
+
+/**********************************************************************/
 /*                        MPI ONCE MACROS                              */
 /**********************************************************************/
 
-#define CCUTILS_MPI_ONCE(statement)                             \
+#define CCUTILS_MPI_ONCE(statement)                     \
     do {                                                \
         int inmacro_myid;                               \
         MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
@@ -22,7 +33,7 @@
         }                                               \
     } while(0);
 
-#define CCUTILS_MPI_PRINT_ONCE(print_statement)                 \
+#define CCUTILS_MPI_PRINT_ONCE(print_statement)         \
     do {                                                \
         int inmacro_myid;                               \
         MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
@@ -32,11 +43,11 @@
         FLUSH_WAIT(200000)                              \
     } while(0);
 
-#define CCUTILS_MPI_PRINTF_ONCE(fmt, ...)                   \
+#define CCUTILS_MPI_PRINTF_ONCE(fmt, ...)               \
     CCUTILS_MPI_PRINT_ONCE(printf(fmt, ##__VA_ARGS__))
 
 /**********************************************************************/
-/*                        MPI ALL PRINT MACROS                          */
+/*                        MPI ALL PRINT MACROS                        */
 /**********************************************************************/
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                      \
@@ -128,18 +139,7 @@
   }
 
 /**********************************************************************/
-/*                           FLUSH UTILITY                               */
-/**********************************************************************/
-
-#define CCUTILS_FLUSH_WAIT(useconds) \
-  do {                       \
-      fflush(stdout);        \
-      fflush(stderr);        \
-      usleep(useconds);      \
-  } while(0);
-
-/**********************************************************************/
-/*                            MPI JSON MACROS                             */
+/*                            MPI JSON MACROS                         */
 /**********************************************************************/
 
 #ifndef CCUTILS_NO_JSON
