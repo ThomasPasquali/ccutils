@@ -143,7 +143,7 @@
 /**********************************************************************/
 
 #ifndef CCUTILS_NO_JSON
-  #define CCUTILS_DECLARE_GLOBAL_JSON(name)                             \
+  #define CCUTILS_DECLARE_GLOBAL_JSON(name)                     \
       int inmacro_myid;                                         \
       MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);             \
       nlohmann::json __section_json_##name;                     \
@@ -152,7 +152,7 @@
           __section_json_global_##name = new nlohmann::json();  \
       }
 
-  #define CCUTILS_MPI_GLOBAL_JSON_PUT(name, key, value)               \
+  #define CCUTILS_MPI_GLOBAL_JSON_PUT(name, key, value)       \
       if (inmacro_myid == 0) {                                \
           (*__section_json_global_##name)[key] = value;       \
       }
