@@ -170,7 +170,7 @@
 
 #define CCUTILS_MPI_SECTION_DEF(name, title)           \
     CCUTILS_DECLARE_GLOBAL_JSON(name)                  \
-    CCUTILS_MPI_PRINT_ONCE(SECTION_DEF(name, title));
+    CCUTILS_MPI_PRINT_ONCE(CCUTILS_SECTION_DEF(name, title));
 
 #ifndef CCUTILS_NO_JSON
 #define CCUTILS_MPI_SECTION_END(name)                                                                                   \
@@ -188,14 +188,14 @@
             delete __section_json_global_##name;                                                                \
             __section_json_global_##name = nullptr;                                                             \
         }                                                                                                       \
-        CCUTILS_MPI_PRINT_ONCE(SECTION_END(name));                                                                      \
+        CCUTILS_MPI_PRINT_ONCE(CCUTILS_SECTION_END(name));                                                                      \
     } while(0);
 #else
 #define CCUTILS_MPI_SECTION_END(name)                                               \
     do {                                                                    \
         int inmacro_myid;                                                   \
         MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                       \
-        CCUTILS_MPI_PRINT_ONCE(SECTION_END(name));                                  \
+        CCUTILS_MPI_PRINT_ONCE(CCUTILS_SECTION_END(name));                                  \
     } while(0);
 #endif
 
