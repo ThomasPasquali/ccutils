@@ -10,75 +10,65 @@
 #include "../macros.hpp"
 
 /**********************************************************************/
+/*                           INIT                                     */
+/**********************************************************************/
+
+#define CCUTILS_MPI_INIT                                  \
+    int ccutils_macro_myid;                               \
+    MPI_Comm_rank(MPI_COMM_WORLD, &ccutils_macro_myid);
+
+/**********************************************************************/
 /*                           FLUSH UTILITY                            */
 /**********************************************************************/
 
 #define CCUTILS_FLUSH_WAIT(useconds) \
-  do {                       \
-      fflush(stdout);        \
-      fflush(stderr);        \
-      usleep(useconds);      \
-  } while(0);
+    fflush(stdout);        \
+    fflush(stderr);        \
+    usleep(useconds);
 
 /**********************************************************************/
 /*                        MPI ONCE MACROS                              */
 /**********************************************************************/
 
-#define CCUTILS_MPI_ONCE(statement)                     \
-    do {                                                \
-        int inmacro_myid;                               \
-        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
-        if (inmacro_myid == 0) {                        \
-            statement;                                  \
-        }                                               \
-    } while(0);
+#define CCUTILS_MPI_ONCE(statement) \
+    if (ccutils_macro_myid == 0) {  \
+        statement;                  \
+    }
 
-#define CCUTILS_MPI_PRINT_ONCE(print_statement)         \
-    do {                                                \
-        int inmacro_myid;                               \
-        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);   \
-        if (inmacro_myid == 0) {                        \
-            print_statement;                            \
-        }                                               \
-        CCUTILS_FLUSH_WAIT(200000)                      \
-    } while(0);
+#define CCUTILS_MPI_PRINT_ONCE(print_statement) \
+    if (ccutils_macro_myid == 0) {              \
+        print_statement;                        \
+    }                                           \
+    CCUTILS_FLUSH_WAIT(200000)
 
-#define CCUTILS_MPI_PRINTF_ONCE(fmt, ...)               \
+#define CCUTILS_MPI_PRINTF_ONCE(fmt, ...) \
     CCUTILS_MPI_PRINT_ONCE(printf(fmt, ##__VA_ARGS__))
 
 /**********************************************************************/
 /*                        MPI ALL PRINT MACROS                        */
 /**********************************************************************/
 
-#define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                      \
-    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))    \
-    CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                              \
-    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name))    \
-    CCUTILS_FLUSH_WAIT(200000)                                                            \
-  }
-
 #define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK) {                                   \
-    int inmacro_myid, inmacro_ntask;                                                 \
-    MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                                    \
+    int inmacro_ntask;                                                               \
     MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                   \
     FILE *fp;                                                                        \
     char s[50], s1[50];                                                              \
-    sprintf(s, "ccutils_temp_%d.txt", inmacro_myid);                                 \
+    sprintf(s, "ccutils_temp_%d.txt", ccutils_macro_myid);                           \
     fp = fopen (s, "w");                                                             \
     fclose(fp);                                                                      \
     fp = fopen (s, "a+");                                                            \
-    fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, inmacro_myid);                      \
+    fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, ccutils_macro_myid);                \
     PRINTS_CODE_BLOCK;                                                               \
-    fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, inmacro_myid);                        \
+    fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, ccutils_macro_myid);                  \
     fclose(fp);                                                                      \
     for (int i=0; i<inmacro_ntask; i++) {                                            \
-        if (inmacro_myid == i) {                                                     \
+        if (ccutils_macro_myid == i) {                                               \
             int error;                                                               \
-            sprintf(s1, "cat ccutils_temp_%d.txt", inmacro_myid);                    \
+            sprintf(s1, "cat ccutils_temp_%d.txt", ccutils_macro_myid);              \
             error = system(s1);                                                      \
             if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not cat tmp file.");       \
-            sprintf(s1, "rm ccutils_temp_%d.txt", inmacro_myid);                     \
+            sprintf(s1, "rm ccutils_temp_%d.txt", ccutils_macro_myid);               \
             error = system(s1);                                                      \
             if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not rm tmp file.");        \
@@ -87,23 +77,28 @@
     }                                                                                \
   }
 
+#define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                      \
+    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))    \
+    CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                              \
+    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END,   #print_name))    \
+    CCUTILS_FLUSH_WAIT(200000)                                                            \
+  }
+
 /**********************************************************************/
 /*                       MPI PROCESS PRINT MACROS                         */
 /**********************************************************************/
 
-#define CCUTILS_MPI_COMMUNICATOR_PRINT(CM, X)  \
-  {\
-    int global_rank; \
-    int inmacro_myid, inmacro_ntask;  \
-    MPI_Comm_rank(CM, &inmacro_myid);  \
-    MPI_Comm_size(CM, &inmacro_ntask);  \
-    MPI_Comm_rank(MPI_COMM_WORLD, &global_rank);  \
-    char name[MPI_MAX_OBJECT_NAME]; \
-    int name_length; \
-    MPI_Comm_get_name(CM, name, &name_length); \
-    FILE *fp;\
-    char s[50], s1[50];\
-    sprintf(s, "temp_%s_%d_%d.txt", name, inmacro_myid, global_rank);\
+#define CCUTILS_MPI_COMMUNICATOR_PRINT(CM, X) {             \
+    int inmacro_myid, inmacro_ntask;                        \
+    MPI_Comm_rank(CM, &inmacro_myid);                       \
+    MPI_Comm_size(CM, &inmacro_ntask);                      \
+    MPI_Comm_rank(MPI_COMM_WORLD, &ccutils_macro_myid);     \
+    char name[MPI_MAX_OBJECT_NAME];                         \
+    int name_length;                                        \
+    MPI_Comm_get_name(CM, name, &name_length);              \
+    FILE *fp;                                               \
+    char s[50], s1[50];                                     \
+    sprintf(s, "temp_%s_%d_%d.txt", name, inmacro_myid, ccutils_macro_myid); \
     fp = fopen ( s, "w" );\
     fclose(fp);\
     fp = fopen ( s, "a+" );\
@@ -126,8 +121,7 @@
     }\
   }
 
-#define CCUTILS_MPI_PROCESS_PRINT(CM, P, X)  \
-  {\
+#define CCUTILS_MPI_PROCESS_PRINT(CM, P, X) { \
     int myid, ntask;  \
     MPI_Comm_rank(CM, &myid);  \
     MPI_Comm_size(CM, &ntask);  \
@@ -144,17 +138,15 @@
 
 #ifndef CCUTILS_NO_JSON
   #define CCUTILS_DECLARE_GLOBAL_JSON(name)                     \
-      int inmacro_myid;                                         \
-      MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);             \
       nlohmann::json __section_json_##name;                     \
       nlohmann::json* __section_json_global_##name = nullptr;   \
-      if (inmacro_myid == 0) {                                  \
-          __section_json_global_##name = new nlohmann::json();  \
+      if (ccutils_macro_myid == 0) {                            \
+        __section_json_global_##name = new nlohmann::json();    \
       }
 
   #define CCUTILS_MPI_GLOBAL_JSON_PUT(name, key, value)       \
-      if (inmacro_myid == 0) {                                \
-          (*__section_json_global_##name)[key] = value;       \
+      if (ccutils_macro_myid == 0) {                          \
+        (*__section_json_global_##name)[key] = value;         \
       }
 
   #define CCUTILS_MPI_LOCAL_JSON_PUT(name, key, value) \
@@ -204,16 +196,14 @@
 /**********************************************************************/
 
 #ifdef CCUTILS_ENABLE_CUDA
-    #define CCUTILS_MPI_CUDA_PRINT_DEVICE {                                             \
-        int inmacro_myid;                                                   \
-        MPI_Comm_rank(MPI_COMM_WORLD, &inmacro_myid);                       \
-        int dev;                                                            \
-        cudaError_t err = cudaGetDevice(&dev);                              \
-        if (err == cudaSuccess) {                                           \
-            printf("[[Rank %d]] CUDA device: %d\n", inmacro_myid, dev);     \
-        } else {                                                            \
-            printf("cudaGetDevice failed: %s\n", cudaGetErrorString(err));  \
-        }                                                                   \
+    #define CCUTILS_MPI_CUDA_PRINT_DEVICE {                                     \
+        int dev;                                                                \
+        cudaError_t err = cudaGetDevice(&dev);                                  \
+        if (err == cudaSuccess) {                                               \
+            printf("[[Rank %d]] CUDA device: %d\n", ccutils_macro_myid, dev);   \
+        } else {                                                                \
+            printf("cudaGetDevice failed: %s\n", cudaGetErrorString(err));      \
+        }                                                                       \
     }
 #endif
 
