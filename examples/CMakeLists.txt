@@ -3,6 +3,7 @@ project(ccutils_examples LANGUAGES CXX)
 
 option(WITH_CUDA "Enable CUDA utilities" OFF)
 option(WITH_MPI  "Enable MPI utilities"  OFF)
+option(WITH_HIP  "Enable HIP utilities"  OFF)
 
 # ---------------------------------------------------------------
 # Find ccutils (required)
@@ -10,6 +11,7 @@ option(WITH_MPI  "Enable MPI utilities"  OFF)
 # If ccutils provides these variables, set them before find_package
 set(CCUTILS_ENABLE_CUDA "${WITH_CUDA}")
 set(CCUTILS_ENABLE_MPI  "${WITH_MPI}")
+set(CCUTILS_ENABLE_HIP  "${WITH_HIP}")
 
 find_package(ccutils REQUIRED)
 
@@ -31,6 +33,15 @@ if(WITH_CUDA)
 endif()
 
 # ---------------------------------------------------------------
+# Optional HIP
+# ---------------------------------------------------------------
+if(WITH_HIP)
+    message(STATUS "HIP support enabled")
+    enable_language(HIP)   # Ensures HIP compilation is available
+    find_package(HIP REQUIRED) # Optional, depending on CMake version
+endif()
+
+# ---------------------------------------------------------------
 # Example builder helper
 # ---------------------------------------------------------------
 function(add_example name)
@@ -49,6 +60,12 @@ function(add_example name)
     if(WITH_CUDA)
         target_link_libraries(${name} PRIVATE ccutils::ccutils_cuda CUDA::cudart)
         target_compile_definitions(${name} PRIVATE WITH_CUDA)
+    endif()
+
+    # If HIP support is enabled in this build
+    if(WITH_HIP)
+        target_link_libraries(${name} PRIVATE ccutils::ccutils_hip)
+        target_compile_definitions(${name} PRIVATE WITH_HIP)
     endif()
 
     target_compile_options(${name} PRIVATE -O3 -Wall)

@@ -3,6 +3,7 @@
 # ================================================================
 WITH_MPI  ?= 0
 WITH_CUDA ?= 0
+WITH_HIP  ?= 0
 
 CXX      := g++
 CXXFLAGS := -O3 -Wall -std=c++17
@@ -36,6 +37,19 @@ ifeq ($(WITH_CUDA),1)
     CUDA_CFLAGS := -I$(CUDA_HOME)/include
     CUDA_LIBS   := -L$(CUDA_HOME)/lib64 -lcudart
     CXXFLAGS    += $(CUDA_CFLAGS) -DWITH_CUDA -DCCUTILS_ENABLE_CUDA
+endif
+
+# ================================================================
+# Optional HIP
+# ================================================================
+ifeq ($(WITH_HIP),1)
+    HIP_PATH ?= $(shell hipconfig --prefix 2>/dev/null)
+    ifeq ($(HIP_PATH),)
+        $(error HIP not found! Please install ROCm or set HIP_PATH)
+    endif
+    HIP_CFLAGS := -I$(HIP_PATH)/include
+    HIP_LIBS   := -L$(HIP_PATH)/lib -lhiprtc -lhip_hcc
+    CXXFLAGS  += $(HIP_CFLAGS) -DWITH_HIP -DCCUTILS_ENABLE_HIP
 endif
 
 # ================================================================

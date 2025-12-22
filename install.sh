@@ -94,6 +94,7 @@ ensure_line_present() {
 echo "--------- ccutils Installation Options ---------"
 ENABLE_CUDA=OFF
 ENABLE_MPI=OFF
+ENABLE_HIP=OFF
 
 if ask_yes_no "Enable CUDA support?" n; then
     ENABLE_CUDA=ON
@@ -102,6 +103,11 @@ fi
 if ask_yes_no "Enable MPI support?" n; then
     ENABLE_MPI=ON
 fi
+
+if ask_yes_no "Enable HIP support?" n; then
+    ENABLE_HIP=ON
+fi
+
 
 echo
 echo "Selected options:"
@@ -133,7 +139,8 @@ cd "$PKG_DIR"
 echo -e "${GREEN}[3] Configuring CMake...${RESET}"
 cmake -B build -S . \
     -DCCUTILS_ENABLE_CUDA="$ENABLE_CUDA" \
-    -DCCUTILS_ENABLE_MPI="$ENABLE_MPI"
+    -DCCUTILS_ENABLE_MPI="$ENABLE_MPI"   \
+    -DCCUTILS_ENABLE_HIP="$ENABLE_HIP"   
 
 echo -e "${GREEN}[4] Building...${RESET}"
 cmake --build build --parallel 

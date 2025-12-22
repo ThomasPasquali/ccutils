@@ -4,6 +4,7 @@ project(ccutils LANGUAGES C CXX)
 # Options to toggle optional packages
 option(CCUTILS_ENABLE_CUDA "Enable CUDA utilities" OFF)
 option(CCUTILS_ENABLE_MPI  "Enable MPI utilities"  OFF)
+option(CCUTILS_ENABLE_HIP  "Enable HIP utilities"  OFF)
 
 # ---------------- nlohmann/json dependency ----------------
 message(STATUS "Fetching nlohmann_json...")
@@ -38,6 +39,24 @@ if(CCUTILS_ENABLE_CUDA)
     target_link_libraries(ccutils_cuda INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
+# ---------------- HIP package ----------------
+if(CCUTILS_ENABLE_HIP)
+    message(STATUS "CCUTILS: Enabling HIP module")
+    enable_language(HIP)  # Enables HIP compilation if CMake supports it
+
+    add_library(ccutils_hip INTERFACE)
+    target_include_directories(ccutils_hip INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+
+    # Optional: link HIP runtime if needed
+    # target_link_libraries(ccutils_hip INTERFACE HIP::device)
+
+    target_compile_definitions(ccutils_hip INTERFACE CCUTILS_ENABLE_HIP)
+    target_link_libraries(ccutils_hip INTERFACE nlohmann_json::nlohmann_json)
+endif()
+
 # ---------------- MPI package ----------------
 if(CCUTILS_ENABLE_MPI)
     message(STATUS "CCUTILS: Enabling MPI module")
@@ -64,6 +83,11 @@ if(TARGET ccutils_cuda)
     add_library(ccutils::ccutils_cuda ALIAS ccutils_cuda)
 endif()
 
+# ---------------- Namespace Aliases for HIP ----------------
+if(TARGET ccutils_hip)
+    add_library(ccutils::ccutils_hip ALIAS ccutils_hip)
+endif()
+
 # ---------------- Installation ----------------
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     install(DIRECTORY include/ DESTINATION include)
@@ -86,6 +110,10 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 
     if(CCUTILS_ENABLE_MPI)
         install(TARGETS ccutils_mpi EXPORT ccutilsTargets)
+    endif()
+
+    if(CCUTILS_ENABLE_HIP)
+        install(TARGETS ccutils_hip EXPORT ccutilsTargets)
     endif()
 
     install(EXPORT ccutilsTargets
