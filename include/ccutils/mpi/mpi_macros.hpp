@@ -52,8 +52,12 @@
     int inmacro_ntask;                                                               \
     MPI_Comm_size(MPI_COMM_WORLD, &inmacro_ntask);                                   \
     FILE *fp;                                                                        \
-    char s[50], s1[50];                                                              \
-    sprintf(s, "ccutils_temp_%d.txt", ccutils_macro_myid);                           \
+    char s[100], s1[100];                                                            \
+    char job_id[50];                                                                 \
+    char *slurm_job_id = getenv("SLURM_JOB_ID");                                     \
+    if (slurm_job_id == NULL) sprintf(job_id, "%d", getpid());                       \
+    else sprintf(job_id, "%s", slurm_job_id);                                        \
+    sprintf(s, "ccutils_temp_%s_%d.txt", job_id, ccutils_macro_myid);                \
     fp = fopen (s, "w");                                                             \
     fclose(fp);                                                                      \
     fp = fopen (s, "a+");                                                            \
@@ -64,6 +68,7 @@
     for (int i=0; i<inmacro_ntask; i++) {                                            \
         if (ccutils_macro_myid == i) {                                               \
             int error;                                                               \
+            char *jobid = getenv("SLURM_JOB_ID");                                    \
             sprintf(s1, "cat ccutils_temp_%d.txt", ccutils_macro_myid);              \
             error = system(s1);                                                      \
             if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
