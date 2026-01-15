@@ -72,7 +72,7 @@
             error = system(s1);                                                      \
             if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not cat tmp file.");       \
-            sprintf(s1, "rm ccutils_temp_%d.txt", ccutils_macro_myid);               \
+            sprintf(s1, "rm ccutils_temp_%s_%d.txt", job_id, ccutils_macro_myidd);   \
             error = system(s1);                                                      \
             if (error != 0) fprintf(stderr, CCUTILS_FMT_ERROR,                       \
                 __LINE__, __FILE__, "MPI_ALL_PRINT: could not rm tmp file.");        \
