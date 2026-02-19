@@ -60,7 +60,10 @@ int main(int argc, char** argv) {
             fprintf(fp, "Second message from rank %d\n", rank);
         )
     }
-    CCUTILS_MPI_BUFFERED_PRINT_FLUSH()
+    CCUTILS_MPI_BUFFERED_PRINT_ALL_FLUSH
+
+    // Remove any leftover tmp file (not needed here)
+    CCUTILS_MPI_CLEANUP
 
     MPI_Finalize();
     return 0;

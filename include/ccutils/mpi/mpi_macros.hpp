@@ -179,7 +179,10 @@
         }                                                                   \
     }
 
-#define CCUTILS_MPI_BUFFERED_PRINT_FLUSH()                                   \
+/**
+ * This macro will flush only the calling rank buffer
+ */
+#define CCUTILS_MPI_BUFFERED_PRINT_FLUSH                                     \
     {                                                                        \
         FILE *fp;                                                            \
         char fname[256];                                                     \
@@ -216,6 +219,57 @@
             printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_END,                       \
                    ccutils_inmacro_myid);                                    \
         }                                                                    \
+    }
+
+/**
+ * This macro MUST be called by all ranks
+ */
+#define CCUTILS_MPI_BUFFERED_PRINT_ALL_FLUSH                                    \
+    {                                                                           \
+        char fname[256];                                                        \
+        char job_id[64];                                                        \
+        char *slurm_job_id = getenv("SLURM_JOB_ID");                            \
+                                                                                \
+        if (slurm_job_id == NULL)                                               \
+            sprintf(job_id, "%d", getpid());                                    \
+        else                                                                    \
+            sprintf(job_id, "%s", slurm_job_id);                                \
+                                                                                \
+        for (int __ccutils_i = 0; __ccutils_i < ccutils_inmacro_ntask;          \
+             ++__ccutils_i)                                                     \
+        {                                                                       \
+            if (ccutils_inmacro_myid == __ccutils_i)                            \
+            {                                                                   \
+                sprintf(fname, "ccutils_bufprint_%s_rank%d.txt",                \
+                        job_id, ccutils_inmacro_myid);                          \
+                                                                                \
+                FILE *fp = fopen(fname, "r");                                   \
+                if (fp != NULL)                                                 \
+                {                                                               \
+                    printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_START,                \
+                           ccutils_inmacro_myid);                               \
+                                                                                \
+                    int c;                                                      \
+                    while ((c = fgetc(fp)) != EOF)                              \
+                        putchar(c);                                             \
+                                                                                \
+                    fclose(fp);                                                 \
+                                                                                \
+                    if (remove(fname) != 0)                                     \
+                    {                                                           \
+                        fprintf(stderr, CCUTILS_FMT_ERROR,                      \
+                                __LINE__, __FILE__,                             \
+                                "MPI_BUFFERED_PRINT_ALL_FLUSH: could not rm."); \
+                    }                                                           \
+                                                                                \
+                    printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_END,                  \
+                           ccutils_inmacro_myid);                               \
+                    fflush(stdout);                                             \
+                }                                                               \
+            }                                                                   \
+                                                                                \
+            MPI_Barrier(MPI_COMM_WORLD);                                        \
+        }                                                                       \
     }
 
 /**********************************************************************/
@@ -297,7 +351,7 @@
 #endif
 
 /**********************************************************************/
-/*                             MPI STATUS CHECK                           */
+/*                             MPI STATUS CHECK                       */
 /**********************************************************************/
 
 #define CCUTILS_MPI_STATUS_CHECK(NREQ, STATV, COMM)                      \
@@ -314,3 +368,34 @@
     }
 
 #endif
+
+/**********************************************************************/
+/*                       MPI FINALIZE                                 */
+/**********************************************************************/
+
+#define CCUTILS_MPI_CLEANUP                                            \
+    {                                                                  \
+        char fname[256];                                               \
+        char job_id[64];                                               \
+        char *slurm_job_id = getenv("SLURM_JOB_ID");                   \
+                                                                       \
+        if (slurm_job_id == NULL)                                      \
+            sprintf(job_id, "%d", getpid());                           \
+        else                                                           \
+            sprintf(job_id, "%s", slurm_job_id);                       \
+                                                                       \
+        /* ---- Buffered print files ---- */                           \
+        sprintf(fname, "ccutils_bufprint_%s_rank%d.txt",               \
+                job_id, ccutils_inmacro_myid);                         \
+                                                                       \
+        remove(fname); /* safe even if file doesn't exist */           \
+                                                                       \
+        /* ---- Extend here with additional tmp resources ---- */      \
+        /* Example future extension:                                   \
+           sprintf(fname, "ccutils_otherprefix_%s_rank%d.tmp", job_id, \
+                   ccutils_inmacro_myid);                              \
+           remove(fname);                                              \
+        */                                                             \
+                                                                       \
+        MPI_Barrier(MPI_COMM_WORLD);                                   \
+    }
