@@ -36,6 +36,8 @@
 #define CCUTILS_FMT_MPI_PRINT_ALL_START       "[[Rank %d]]\n"
 #define CCUTILS_FMT_MPI_PRINT_ALL_END         "[[END Rank %d]]\n"
 #define CCUTILS_FMT_MPI_PRINT_ALL_DBG         "[[Rank %d, File %s, Line %d]]\n"
+#define CCUTILS_FMT_MPI_PRINT_BUFFERED_START "=+=+=+= Rank %d =+=+=+=\n"
+#define CCUTILS_FMT_MPI_PRINT_BUFFERED_END   "=+=+=+= Rank %d END =+=+=+=\n"
 
 /**********************************************************************/
 /*                               CUDA PRINTS                            */

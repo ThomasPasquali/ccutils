@@ -11,6 +11,8 @@ option(WITH_MPI  "Enable MPI utilities"  OFF)
 set(CCUTILS_ENABLE_CUDA "${WITH_CUDA}")
 set(CCUTILS_ENABLE_MPI  "${WITH_MPI}")
 
+set(ccutils_DIR "../install/lib/cmake/ccutils")
+message("Including CCUTILS from: ${ccutils_DIR}")
 find_package(ccutils REQUIRED)
 
 # ---------------------------------------------------------------

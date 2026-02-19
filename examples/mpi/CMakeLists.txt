@@ -11,7 +11,8 @@ endif()
 # You could alternatively:
 # a) Add this path to the env variable CMAKE_MODULE_PATH
 # b) Use Cmake FetchContent 
-set(ccutils_DIR "../../lib/cmake/ccutils")
+set(ccutils_DIR "../../install/lib/cmake/ccutils")
+message("Including CCUTILS from: ${ccutils_DIR}")
 find_package(ccutils REQUIRED)
 
 add_executable(mpi_example mpi_example.cpp)
