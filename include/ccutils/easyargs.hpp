@@ -247,7 +247,7 @@ static const int BOOLEAN_ARG_COUNT = 0;
 // ARG_T STRUCT
 #define REQUIRED_ARG(type, name, ...) type name;
 #define OPTIONAL_ARG(type, name, ...) type name;
-#define BOOLEAN_ARG(name, ...) _Bool name;
+#define BOOLEAN_ARG(name, ...) bool name;
 // Stores argument values
 typedef struct {
     #ifdef REQUIRED_ARGS
