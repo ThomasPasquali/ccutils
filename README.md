@@ -10,6 +10,7 @@ Header-only collection of C/C++/CUDA/MPI utilities.
 - **Python Output Parser Library**. Using the print macros allows for automatic parsing
 - **ANSI Colors**.
 - **Common Macros**. Asserts, common math operations
+- **CLI args parsing**. Using [`easyargs`](https://github.com/gouwsxander/easy-args/tree/main).
 
 Organized into optional packages:
 - `ccutils` (always available)
