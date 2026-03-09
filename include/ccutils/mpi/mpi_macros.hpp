@@ -57,12 +57,18 @@
         FILE *fp;                                                                          \
         char s[100], s1[100];                                                              \
         char job_id[50];                                                                   \
+        char pid_str[20];                                                                  \
+        sprintf(pid_str, "%d", getpid());                                                  \
         char *slurm_job_id = getenv("SLURM_JOB_ID");                                       \
-        if (slurm_job_id == NULL)                                                          \
-            sprintf(job_id, "%d", getpid());                                               \
-        else                                                                               \
+        if (slurm_job_id != NULL){                                                         \
             sprintf(job_id, "%s", slurm_job_id);                                           \
-        sprintf(s, "ccutils_temp_%s_%d.txt", job_id, ccutils_inmacro_myid);                \
+            sprintf(s, "ccutils_temp_%s_%s_%d.txt", job_id, pid_str, ccutils_inmacro_myid);\
+        }                                                                                  \
+        else                                                                               \
+        {                                                                                  \
+            sprintf(job_id, "%s", pid_str);                                                \
+            sprintf(s, "ccutils_temp_%s_%d.txt", pid_str, ccutils_inmacro_myid);           \
+        }                                                                                  \
         fp = fopen(s, "w");                                                                \
         fclose(fp);                                                                        \
         fp = fopen(s, "a+");                                                               \
