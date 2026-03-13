@@ -81,12 +81,18 @@
             if (ccutils_inmacro_myid == i)                                                 \
             {                                                                              \
                 int error;                                                                 \
-                sprintf(s1, "cat ccutils_temp_%s_%d.txt", job_id, ccutils_inmacro_myid);   \
+                if (slurm_job_id != NULL)                                                        \
+                    sprintf(s1, "cat ccutils_temp_%s_%s_%d.txt", job_id, pid_str, ccutils_inmacro_myid);   \
+                else                                                                               \
+                    sprintf(s1, "cat ccutils_temp_%s_%d.txt", pid_str, ccutils_inmacro_myid);   \
                 error = system(s1);                                                        \
                 if (error != 0)                                                            \
                     fprintf(stderr, CCUTILS_FMT_ERROR,                                     \
                             __LINE__, __FILE__, "MPI_ALL_PRINT: could not cat tmp file."); \
-                sprintf(s1, "rm ccutils_temp_%s_%d.txt", job_id, ccutils_inmacro_myid);    \
+                if (slurm_job_id != NULL)                                                        \
+                    sprintf(s1, "rm ccutils_temp_%s_%s_%d.txt", job_id, pid_str, ccutils_inmacro_myid);    \
+                else                                                                               \
+                    sprintf(s1, "rm ccutils_temp_%s_%d.txt", pid_str, ccutils_inmacro_myid);    \
                 error = system(s1);                                                        \
                 if (error != 0)                                                            \
                     fprintf(stderr, CCUTILS_FMT_ERROR,                                     \
