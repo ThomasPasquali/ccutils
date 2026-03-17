@@ -97,7 +97,7 @@
             /* No one moves to the next rank until Rank 'i' is done flushing */                 \
             MPI_Barrier(MPI_COMM_WORLD);                                                        \
         }                                                                                       \
-    } while (0)
+    } while (0);
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                         \
     CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))       \
