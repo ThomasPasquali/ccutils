@@ -52,55 +52,52 @@
 /*                        MPI ALL PRINT MACROS                        */
 /**********************************************************************/
 
-#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                           \
-    {                                                                                      \
-        FILE *fp;                                                                          \
-        char s[100], s1[100];                                                              \
-        char job_id[50];                                                                   \
-        char pid_str[20];                                                                  \
-        sprintf(pid_str, "%d", getpid());                                                  \
-        char *slurm_job_id = getenv("SLURM_JOB_ID");                                       \
-        if (slurm_job_id != NULL){                                                         \
-            sprintf(job_id, "%s", slurm_job_id);                                           \
-            sprintf(s, "ccutils_temp_%s_%s_%d.txt", job_id, pid_str, ccutils_inmacro_myid);\
-        }                                                                                  \
-        else                                                                               \
-        {                                                                                  \
-            sprintf(job_id, "%s", pid_str);                                                \
-            sprintf(s, "ccutils_temp_%s_%d.txt", pid_str, ccutils_inmacro_myid);           \
-        }                                                                                  \
-        fp = fopen(s, "w");                                                                \
-        fclose(fp);                                                                        \
-        fp = fopen(s, "a+");                                                               \
-        fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, ccutils_inmacro_myid);                \
-        PRINTS_CODE_BLOCK;                                                                 \
-        fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, ccutils_inmacro_myid);                  \
-        fclose(fp);                                                                        \
-        for (int i = 0; i < ccutils_inmacro_ntask; i++)                                    \
-        {                                                                                  \
-            if (ccutils_inmacro_myid == i)                                                 \
-            {                                                                              \
-                int error;                                                                 \
-                if (slurm_job_id != NULL)                                                        \
-                    sprintf(s1, "cat ccutils_temp_%s_%s_%d.txt", job_id, pid_str, ccutils_inmacro_myid);   \
-                else                                                                               \
-                    sprintf(s1, "cat ccutils_temp_%s_%d.txt", pid_str, ccutils_inmacro_myid);   \
-                error = system(s1);                                                        \
-                if (error != 0)                                                            \
-                    fprintf(stderr, CCUTILS_FMT_ERROR,                                     \
-                            __LINE__, __FILE__, "MPI_ALL_PRINT: could not cat tmp file."); \
-                if (slurm_job_id != NULL)                                                        \
-                    sprintf(s1, "rm ccutils_temp_%s_%s_%d.txt", job_id, pid_str, ccutils_inmacro_myid);    \
-                else                                                                               \
-                    sprintf(s1, "rm ccutils_temp_%s_%d.txt", pid_str, ccutils_inmacro_myid);    \
-                error = system(s1);                                                        \
-                if (error != 0)                                                            \
-                    fprintf(stderr, CCUTILS_FMT_ERROR,                                     \
-                            __LINE__, __FILE__, "MPI_ALL_PRINT: could not rm tmp file.");  \
-            }                                                                              \
-            MPI_Barrier(MPI_COMM_WORLD);                                                   \
-        }                                                                                  \
-    }
+#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                                \
+    do {                                                                                        \
+        FILE *fp;                                                                               \
+        char s[256];                                                                            \
+        char job_id[128] = "local";                                                             \
+                                                                                                \
+        /* 1. Get Job ID for uniqueness across multiple jobs */                                 \
+        char *slurm_id = getenv("SLURM_JOB_ID");                                                \
+        if (slurm_id != NULL) snprintf(job_id, sizeof(job_id), "%s", slurm_id);                 \
+                                                                                                \
+        /* 2. Create the filename using YOUR PID logic */                                       \
+        snprintf(s, sizeof(s), "ccutils_tmp_%s_%d_rank%d.txt",                                  \
+                 job_id, (int)getpid(), ccutils_inmacro_myid);                                  \
+                                                                                                \
+        /* 3. Everyone writes their own code block to their own file */                         \
+        fp = fopen(s, "w");                                                                     \
+        if (fp != NULL) {                                                                       \
+            fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, ccutils_inmacro_myid);                 \
+            PRINTS_CODE_BLOCK;                                                                  \
+            fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, ccutils_inmacro_myid);                   \
+            fclose(fp);                                                                         \
+        }                                                                                       \
+                                                                                                \
+        /* 4. Barrier: Wait for everyone to finish writing to the disk */                       \
+        MPI_Barrier(MPI_COMM_WORLD);                                                            \
+                                                                                                \
+        /* 5. YOUR ROUND-ROBIN LOGIC (Rank by Rank) */                                          \
+        for (int i = 0; i < ccutils_inmacro_ntask; i++) {                                       \
+            if (ccutils_inmacro_myid == i) {                                                    \
+                FILE *tfp = fopen(s, "r");                                                      \
+                if (tfp != NULL) {                                                              \
+                    char buffer[4096];                                                          \
+                    size_t bytes;                                                               \
+                    while ((bytes = fread(buffer, 1, sizeof(buffer), tfp)) > 0) {               \
+                        fwrite(buffer, 1, bytes, stdout);                                       \
+                    }                                                                           \
+                    fclose(tfp);                                                                \
+                    /* CRITICAL: Tell the OS to push this text out NOW */                       \
+                    fflush(stdout);                                                             \
+                }                                                                               \
+                remove(s); /* Rank cleans up its own file */                                    \
+            }                                                                                   \
+            /* No one moves to the next rank until Rank 'i' is done flushing */                 \
+            MPI_Barrier(MPI_COMM_WORLD);                                                        \
+        }                                                                                       \
+    } while (0)
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                         \
     CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))       \
