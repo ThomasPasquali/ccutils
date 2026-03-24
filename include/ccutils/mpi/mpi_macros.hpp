@@ -52,52 +52,94 @@
 /*                        MPI ALL PRINT MACROS                        */
 /**********************************************************************/
 
-#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                                \
-    do {                                                                                        \
-        FILE *fp;                                                                               \
-        char s[256];                                                                            \
-        char job_id[128] = "local";                                                             \
-                                                                                                \
-        /* 1. Get Job ID for uniqueness across multiple jobs */                                 \
-        char *slurm_id = getenv("SLURM_JOB_ID");                                                \
-        if (slurm_id != NULL) snprintf(job_id, sizeof(job_id), "%s", slurm_id);                 \
-                                                                                                \
-        /* 2. Create the filename using YOUR PID logic */                                       \
-        snprintf(s, sizeof(s), "ccutils_tmp_%s_%d_rank%d.txt",                                  \
-                 job_id, (int)getpid(), ccutils_inmacro_myid);                                  \
-                                                                                                \
-        /* 3. Everyone writes their own code block to their own file */                         \
-        fp = fopen(s, "w");                                                                     \
-        if (fp != NULL) {                                                                       \
-            fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, ccutils_inmacro_myid);                 \
-            PRINTS_CODE_BLOCK;                                                                  \
-            fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, ccutils_inmacro_myid);                   \
-            fclose(fp);                                                                         \
-        }                                                                                       \
-                                                                                                \
-        /* 4. Barrier: Wait for everyone to finish writing to the disk */                       \
-        MPI_Barrier(MPI_COMM_WORLD);                                                            \
-                                                                                                \
-        /* 5. YOUR ROUND-ROBIN LOGIC (Rank by Rank) */                                          \
-        for (int i = 0; i < ccutils_inmacro_ntask; i++) {                                       \
-            if (ccutils_inmacro_myid == i) {                                                    \
-                FILE *tfp = fopen(s, "r");                                                      \
-                if (tfp != NULL) {                                                              \
-                    char buffer[4096];                                                          \
-                    size_t bytes;                                                               \
-                    while ((bytes = fread(buffer, 1, sizeof(buffer), tfp)) > 0) {               \
-                        fwrite(buffer, 1, bytes, stdout);                                       \
-                    }                                                                           \
-                    fclose(tfp);                                                                \
-                    /* CRITICAL: Tell the OS to push this text out NOW */                       \
-                    fflush(stdout);                                                             \
-                }                                                                               \
-                remove(s); /* Rank cleans up its own file */                                    \
-            }                                                                                   \
-            /* No one moves to the next rank until Rank 'i' is done flushing */                 \
-            MPI_Barrier(MPI_COMM_WORLD);                                                        \
-        }                                                                                       \
-    } while (0);
+#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                      \
+do {                                                                                  \
+    int _ccutils_myid, _ccutils_numprocs;                                             \
+    MPI_Comm_rank(MPI_COMM_WORLD, &_ccutils_myid);                                    \
+    MPI_Comm_size(MPI_COMM_WORLD, &_ccutils_numprocs);                                \
+                                                                                      \
+    /* STEP 1: Each rank writes output to local memory */                             \
+    char  *_ccutils_buf = NULL;                                                       \
+    size_t _ccutils_bsz = 0;                                                          \
+    FILE  *fp = open_memstream(&_ccutils_buf, &_ccutils_bsz);                         \
+    if (fp != NULL) {                                                                 \
+        fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, _ccutils_myid);                  \
+        PRINTS_CODE_BLOCK;                                                            \
+        fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, _ccutils_myid);                    \
+        fclose(fp);                                                                   \
+    } else {                                                                          \
+        fprintf(stderr, "[Rank %d] WARNING: open_memstream failed, "                  \
+                        "output will be missing.\n", _ccutils_myid);                  \
+        _ccutils_buf = (char *)calloc(1, 1);                                          \
+        _ccutils_bsz = 0;                                                             \
+    }                                                                                 \
+                                                                                      \
+    /* Guard: abort if any rank's output exceeds INT_MAX */                           \
+    if (_ccutils_bsz > (size_t)INT_MAX) {                                             \
+        fprintf(stderr, "[Rank %d] FATAL: per-rank output exceeds INT_MAX "           \
+                        "(%zu bytes), aborting.\n", _ccutils_myid, _ccutils_bsz);     \
+        MPI_Abort(MPI_COMM_WORLD, 1);                                                 \
+    }                                                                                 \
+    int _ccutils_local_count = (int)_ccutils_bsz;                                     \
+                                                                                      \
+    int *_ccutils_recvcounts = NULL;                                                  \
+    int *_ccutils_displs     = NULL;                                                  \
+    char *_ccutils_recvbuf   = NULL;                                                  \
+                                                                                      \
+    if (_ccutils_myid == 0) {                                                         \
+        _ccutils_recvcounts = (int *)malloc(_ccutils_numprocs * sizeof(int));         \
+        _ccutils_displs     = (int *)malloc(_ccutils_numprocs * sizeof(int));         \
+        if (!_ccutils_recvcounts || !_ccutils_displs) {                               \
+            fprintf(stderr, "[Rank 0] FATAL: metadata malloc failed.\n");             \
+            MPI_Abort(MPI_COMM_WORLD, 1);                                             \
+        }                                                                             \
+    }                                                                                 \
+                                                                                      \
+    /* STEP 2: Gather sizes */                                                        \
+    MPI_Gather(&_ccutils_local_count, 1, MPI_INT,                                     \
+               _ccutils_recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);                   \
+                                                                                      \
+    /* Rank 0: compute displacements and guard against total overflow */              \
+    if (_ccutils_myid == 0) {                                                         \
+        long long _ccutils_total = 0;                                                 \
+        for (int i = 0; i < _ccutils_numprocs; i++) {                                 \
+            _ccutils_displs[i] = (int)_ccutils_total;                                 \
+            _ccutils_total += _ccutils_recvcounts[i];                                 \
+            if (_ccutils_total > (long long)INT_MAX) {                                \
+                fprintf(stderr, "[Rank 0] FATAL: combined output exceeds INT_MAX "    \
+                                "after rank %d, aborting.\n", i);                     \
+                MPI_Abort(MPI_COMM_WORLD, 1);                                         \
+            }                                                                         \
+        }                                                                             \
+        int _ccutils_total_chars = (int)_ccutils_total;                               \
+        _ccutils_recvbuf = (char *)malloc(_ccutils_total_chars + 1);                  \
+        if (!_ccutils_recvbuf) {                                                      \
+            fprintf(stderr, "[Rank 0] FATAL: combined buffer malloc failed.\n");      \
+            MPI_Abort(MPI_COMM_WORLD, 1);                                             \
+        }                                                                             \
+        _ccutils_recvbuf[_ccutils_total_chars] = '\0';                                \
+    }                                                                                 \
+                                                                                      \
+    /* STEP 3: Gather actual strings */                                               \
+    MPI_Gatherv(_ccutils_buf, _ccutils_local_count, MPI_CHAR,                         \
+                _ccutils_recvbuf, _ccutils_recvcounts, _ccutils_displs, MPI_CHAR,     \
+                0, MPI_COMM_WORLD);                                                   \
+                                                                                      \
+    /* STEP 4: Rank 0 prints and cleans up */                                         \
+    if (_ccutils_myid == 0) {                                                         \
+        int _ccutils_total_size = _ccutils_displs[_ccutils_numprocs - 1]              \
+                                + _ccutils_recvcounts[_ccutils_numprocs - 1];         \
+        fwrite(_ccutils_recvbuf, 1, _ccutils_total_size, stdout);                     \
+        fflush(stdout);                                                               \
+        free(_ccutils_recvcounts);                                                    \
+        free(_ccutils_displs);                                                        \
+        free(_ccutils_recvbuf);                                                       \
+    }                                                                                 \
+                                                                                      \
+    free(_ccutils_buf);                                                               \
+    MPI_Barrier(MPI_COMM_WORLD);                                                      \
+} while (0); 
+
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                         \
     CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))       \
