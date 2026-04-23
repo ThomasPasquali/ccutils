@@ -220,6 +220,7 @@ namespace ccutils_timers {
 #define CCUTILS_CPU_TIMER_START(name) \
   __timer_start_##name = std::chrono::high_resolution_clock::now();
 
+// Time is reported in milliseconds
 #define CCUTILS_CPU_TIMER_STOP(name) \
   do { \
     __timer_stop_##name = std::chrono::high_resolution_clock::now(); \

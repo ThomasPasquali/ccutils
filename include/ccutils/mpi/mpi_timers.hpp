@@ -30,6 +30,7 @@
         __timer_start_##name = MPI_Wtime(); \
     } while (0);
 
+// Time is reported in seconds
 #define CCUTILS_MPI_TIMER_STOP(name)                                               \
     do                                                                             \
     {                                                                              \

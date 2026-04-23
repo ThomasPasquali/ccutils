@@ -32,6 +32,7 @@
 
 #define CCUTILS_CUDA_TIMER_START_DEFAULT(name) CCUTILS_CUDA_TIMER_START(name, 0)
 
+// Time is reported in milliseconds
 #define CCUTILS_CUDA_TIMER_STOP(name) \
   do { \
     CCUTILS_CHECK_CUDA(cudaEventRecord(__timer_stop_##name, __timer_stream_##name)); \
