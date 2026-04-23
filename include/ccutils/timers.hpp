@@ -129,32 +129,35 @@ namespace ccutils_timers {
 /**********************************************************************/
 /*                         TIMER PRINTING                              */
 /**********************************************************************/
+
+#define CCUTILS_TIMER_VALUES(name) __timer_vals_##name
+
 #define CCUTILS_TIMER_STATS(name) \
-  ccutils_timers::get_timer_stats(__timer_vals_##name);
+  ccutils_timers::get_timer_stats(CCUTILS_TIMER_VALUES(name));
 
 #define CCUTILS_TIMER_PRINT(name) \
-  ccutils_timers::print_stats(__timer_vals_##name, #name, "Timer");
+  ccutils_timers::print_stats(CCUTILS_TIMER_VALUES(name), #name, "Timer");
 
 #define CCUTILS_TIMER_PRINT_LAST(name) \
-  ccutils_timers::print_last_time(__timer_vals_##name, #name, "Timer");
+  ccutils_timers::print_last_time(CCUTILS_TIMER_VALUES(name), #name, "Timer");
 
 #define CCUTILS_TIMER_PRINT_LAST_WPREFIX_STR(name, prefix) \
-  ccutils_timers::print_last_time(__timer_vals_##name, #name, prefix);
+  ccutils_timers::print_last_time(CCUTILS_TIMER_VALUES(name), #name, prefix);
 
 #define CCUTILS_TIMER_PRINT_ALL(name) \
-  ccutils_timers::print_all_times(__timer_vals_##name, #name);
+  ccutils_timers::print_all_times(CCUTILS_TIMER_VALUES(name), #name);
 
 #define CCUTILS_TIMER_PRINT_WPREFIX(name, prefix) \
-  ccutils_timers::print_stats(__timer_vals_##name, #name, #prefix);
+  ccutils_timers::print_stats(CCUTILS_TIMER_VALUES(name), #name, #prefix);
 
 #define CCUTILS_TIMER_PRINT_LAST_WPREFIX(name, prefix) \
-  ccutils_timers::print_last_time(__timer_vals_##name, #name, #prefix);
+  ccutils_timers::print_last_time(CCUTILS_TIMER_VALUES(name), #name, #prefix);
 
 #define CCUTILS_TIMER_PRINT_EXCLUDING_FIRST_N(name, nexclude) \
-  ccutils_timers::print_stats(__timer_vals_##name, #name, "Timer", nexclude);
+  ccutils_timers::print_stats(CCUTILS_TIMER_VALUES(name), #name, "Timer", nexclude);
 
 #define CCUTILS_TIMER_PRINT_WPREFIX_STR(name, prefix) \
-  ccutils_timers::print_stats(__timer_vals_##name, #name, prefix);
+  ccutils_timers::print_stats(CCUTILS_TIMER_VALUES(name), #name, prefix);
 
 /**********************************************************************/
 /*                         TIMER OPERATIONS                             */
@@ -208,6 +211,11 @@ namespace ccutils_timers {
 #define CCUTILS_CPU_TIMER_DEF(name) \
   std::chrono::high_resolution_clock::time_point __timer_start_##name, __timer_stop_##name; \
   std::vector<float> __timer_vals_##name;
+
+#define CCUTILS_CPU_TIMER_IMPORT(name)                                   \
+  extern chrono::high_resolution_clock::time_point __timer_start_##name; \
+  extern chrono::high_resolution_clock::time_point __timer_stop_##name;  \
+  extern std::vector<float> __timer_vals_##name;
 
 #define CCUTILS_CPU_TIMER_START(name) \
   __timer_start_##name = std::chrono::high_resolution_clock::now();

@@ -6,6 +6,7 @@
 #endif
 
 #include <unistd.h>
+#include <limits.h>
 #include "../formats.h"
 #include "../macros.hpp"
 

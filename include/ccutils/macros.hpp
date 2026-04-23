@@ -47,7 +47,7 @@
 #define CCUTILS_SECTION_END(name) \
   printf(CCUTILS_FMT_SECTION_END, #name);
 #else
-// TODO fix and test
+
 #define CCUTILS_SECTION_DEF(name, title)             \
   nlohmann::json __section_json_##name;              \
   do                                                 \
