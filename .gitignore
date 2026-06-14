@@ -1,11 +1,16 @@
 .vscode
+*.kdev4
 
 # Build & Install dirs
 *build/
 *install/
 *lib/
+CMake*
+*Makefile
+cmake_install.cmake
 
 # Examples
 examples/cpu/cpu_timers
 examples/cuda/cuda_example
-examples/mpi/mpi_example
+examples/mpi/mpi_exampleexamples/filelogger/output
+examples/filelogger/filelogger_example
