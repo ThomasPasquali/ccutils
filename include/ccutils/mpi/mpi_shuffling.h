@@ -14,7 +14,7 @@
 
 struct MpiShufflingHelper {
 private:
-  MyMpiComm comm;
+  CcutilsMpiComm comm;
   int *myindices;
   int *allindices;
   int indices_per_process;

@@ -8,12 +8,12 @@ int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
     // --- Test MyMpiComm wrapping MPI_COMM_WORLD ---
-    MyMpiComm world;
+    CcutilsMpiComm world;
     world.init(MPI_COMM_WORLD);
     world.print_info("world", stdout);
 
     // --- Test MyMpiComm wrapping MPI_COMM_NULL ---
-    MyMpiComm null_comm;
+    CcutilsMpiComm null_comm;
     null_comm.init(MPI_COMM_NULL);
     MPI_PRINT_ONCE("null_comm: rank=%d size=%d (expected -1 -1)\n",
                    null_comm.rank, null_comm.size);
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     MPI_Comm sub;
     MPI_Comm_split(MPI_COMM_WORLD, color, world.rank, &sub);
 
-    MyMpiComm subcomm;
+    CcutilsMpiComm subcomm;
     subcomm.init(sub);
     subcomm.print_info(color == 0 ? "even" : "odd", stdout);
 

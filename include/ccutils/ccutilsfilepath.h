@@ -25,7 +25,7 @@
 /*  fp.get_fullpath()  ->  /cwd/first/second/third/test.csv            */
 /* ------------------------------------------------------------------ */
 
-struct MyFilePath {
+struct CcutilsFilePath {
   private:
     char *directory; /* absolute path to the leaf folder, trailing separator */
     char *fullpath;  /* directory + filename                                  */
@@ -54,7 +54,7 @@ struct MyFilePath {
     /* MyFilePath("test.csv", "first", "second", "third", NULL)
        Resolves the current working directory, appends each folder in order,
        creates the full tree if needed, and stores the resulting paths. */
-    MyFilePath(const char *filename, ...) {
+    CcutilsFilePath(const char *filename, ...) {
         /* --- get current working directory --- */
         char cwd[4096];
         if (GETCWD(cwd, sizeof(cwd)) == NULL) {

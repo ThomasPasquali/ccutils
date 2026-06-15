@@ -9,14 +9,14 @@
 /*  Enums                                                               */
 /* ------------------------------------------------------------------ */
 
-enum myTypesOptions   { MYINT, MYUINT, MYFLOAT, MYCHAR, MYSTRING };
-enum myWritingOptions { MYINT_D, MYUINT_U, MYFLOAT_F, MYFLOAT_LF, MYFLOAT_E, MYCHAR_C, MYSTRING_S };
+enum CcutilsTypesOptions   { MYINT, MYUINT, MYFLOAT, MYCHAR, MYSTRING };
+enum CcutilsWritingOptions { MYINT_D, MYUINT_U, MYFLOAT_F, MYFLOAT_LF, MYFLOAT_E, MYCHAR_C, MYSTRING_S };
 
 /* ------------------------------------------------------------------ */
 /*  MyLogFile                                                           */
 /* ------------------------------------------------------------------ */
 
-struct MyLogFile {
+struct CcutilsLogFile {
     FILE *log_file;
 
   private:
@@ -25,10 +25,10 @@ struct MyLogFile {
     char  *filename;
     int    is_ready; /* 1 only after set_types + set_writing both called */
 
-    enum myTypesOptions   *types;
-    enum myWritingOptions *writing;
+    enum CcutilsTypesOptions   *types;
+    enum CcutilsWritingOptions *writing;
 
-    static int writing_matches_type(enum myTypesOptions t, enum myWritingOptions w) {
+    static int writing_matches_type(enum CcutilsTypesOptions t, enum CcutilsWritingOptions w) {
         switch (t) {
             case MYINT:    return w == MYINT_D;
             case MYUINT:   return w == MYUINT_U;
@@ -85,7 +85,7 @@ struct MyLogFile {
     }
 
   public:
-    MyLogFile(const char *in_filename) {
+    CcutilsLogFile(const char *in_filename) {
         log_file = NULL;
         header   = NULL;
         types    = NULL;
@@ -143,10 +143,10 @@ struct MyLogFile {
 
         free(types);
         free(writing);
-        types   = (enum myTypesOptions *)  malloc(sizeof(enum myTypesOptions)   * nfields);
-        writing = (enum myWritingOptions *) malloc(sizeof(enum myWritingOptions) * nfields);
-        memset(types,   0, sizeof(enum myTypesOptions)   * nfields);
-        memset(writing, 0, sizeof(enum myWritingOptions) * nfields);
+        types   = (enum CcutilsTypesOptions *)  malloc(sizeof(enum CcutilsTypesOptions)   * nfields);
+        writing = (enum CcutilsWritingOptions *) malloc(sizeof(enum CcutilsWritingOptions) * nfields);
+        memset(types,   0, sizeof(enum CcutilsTypesOptions)   * nfields);
+        memset(writing, 0, sizeof(enum CcutilsWritingOptions) * nfields);
         is_ready = 0;
 
         open_file();
@@ -163,7 +163,7 @@ struct MyLogFile {
         va_list args;
         va_start(args, count);
         for (size_t i = 0; i < nfields; i++)
-            types[i] = (enum myTypesOptions)va_arg(args, int);
+            types[i] = (enum CcutilsTypesOptions)va_arg(args, int);
         va_end(args);
         is_ready = 0; /* require set_writing to be (re)called after changing types */
     }
@@ -179,7 +179,7 @@ struct MyLogFile {
         va_list args;
         va_start(args, count);
         for (size_t i = 0; i < nfields; i++) {
-            enum myWritingOptions w = (enum myWritingOptions)va_arg(args, int);
+            enum CcutilsWritingOptions w = (enum CcutilsWritingOptions)va_arg(args, int);
             if (!writing_matches_type(types[i], w)) {
                 fprintf(stderr,
                     "set_writing: field %zu — option %d incompatible with type %d\n",

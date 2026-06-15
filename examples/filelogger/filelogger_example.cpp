@@ -1,17 +1,17 @@
 #include <cstdio>
 
-#include <ccutils/myfilepath.h>
+#include <ccutils/ccutilsfilepath.h>
 #include <ccutils/csvlogger.h>
 
 int main() {
     // --- MyFilePath: build path and create directories ---
-    MyFilePath fp("results.csv", "output", "run01", "data", NULL);
+    CcutilsFilePath fp("results.csv", "output", "run01", "data", NULL);
 
     printf("directory : %s\n", fp.get_directory());
     printf("full path : %s\n", fp.get_fullpath());
 
     // --- MyLogFile: write a CSV with mixed types ---
-    MyLogFile log(fp.get_fullpath());
+    CcutilsLogFile log(fp.get_fullpath());
 
     log.set_header("label", "category", "rank", "iter", "value", NULL);
     log.set_types(5, MYSTRING, MYCHAR, MYINT, MYUINT, MYFLOAT);

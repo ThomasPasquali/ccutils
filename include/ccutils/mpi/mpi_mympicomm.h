@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 // NOTE TODO TEMPORARY JUST TO MAKE IT WORKS TODO NOTE
-struct MyMpiComm {
+struct CcutilsMpiComm {
     MPI_Comm comm;
     int rank, size;
 
