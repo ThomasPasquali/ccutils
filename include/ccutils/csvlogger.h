@@ -56,9 +56,14 @@ struct MyLogFile {
         char existing[512] = {0};
         if (fgets(existing, sizeof(existing), probe) == NULL) {
             fclose(probe);
-            fprintf(stderr, "Error: log file %s exists but is empty or unreadable.\n",
-                    filename);
-            exit(EXIT_FAILURE);
+            log_file = fopen(filename, "w");
+            if (log_file == NULL) {
+                fprintf(stderr, "Error opening log file %s for writing: ", filename);
+                perror("");
+                exit(EXIT_FAILURE);
+            }
+            fputs(header, log_file);
+            return;
         }
         fclose(probe);
 
