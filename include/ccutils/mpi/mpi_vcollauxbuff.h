@@ -9,18 +9,11 @@
 #include <ccutils/mpi/mpi_mympicomm.h>
 
 typedef enum {
-    CCUTILS_ALLREDUCE,
-    CCUTILS_ALL2ALL,
-    CCUTILS_ALL2ALLV,
-    CCUTILS_ALLGATHER,
-    CCUTILS_ALLGATHERV,
-    CCUTILS_SCATTER,  // scatter
-    CCUTILS_SCATTERV, // scatter-variable
-    CCUTILS_GATHER,
-    CCUTILS_GATHERV,
-    CCUTILS_PEER2PEER,
-    CCUTILS_PINGPONG,
-    CCUTILS_UNDEF
+    CCUTILS_AUXBUFF_ALL2ALLV,
+    CCUTILS_AUXBUFF_ALLGATHERV,
+    CCUTILS_AUXBUFF_SCATTERV,
+    CCUTILS_AUXBUFF_GATHERV,
+    CCUTILS_AUXBUFF_EMPTY
 } CcutilsCommunicatioType;
 
 struct CcutilsVcollectiveAuxiliaryBuffers {
@@ -28,6 +21,18 @@ struct CcutilsVcollectiveAuxiliaryBuffers {
 private:
   CcutilsMpiComm mycomm;
   CcutilsCommunicatioType commtype;
+  bool is_allocated;
+
+  void free_buffers() {
+    free(send_count);        send_count        = nullptr;
+    free(recv_count);        recv_count        = nullptr;
+    free(send_displacement); send_displacement = nullptr;
+    free(recv_displacement); recv_displacement = nullptr;
+    nelements_send = 0;
+    nelements_recv = 0;
+    is_allocated   = false;
+    commtype       = CCUTILS_AUXBUFF_EMPTY;
+  }
 
   void compute_displacement_buffs(int* input, int* output) {
     output[0] = 0;
@@ -53,11 +58,10 @@ public:
   int nelements_recv;
 
   CcutilsVcollectiveAuxiliaryBuffers(CcutilsMpiComm &comm_input,
-                                        CcutilsCommunicatioType commtype_input,
                                         int root_input){
     root     = root_input;
     mycomm   = comm_input;
-    commtype = commtype_input;
+    commtype = CCUTILS_AUXBUFF_EMPTY;
 
     send_count        = nullptr;
     recv_count        = nullptr;
@@ -65,13 +69,12 @@ public:
     recv_displacement = nullptr;
     nelements_send    = 0;
     nelements_recv    = 0;
+    is_allocated      = false;
   }
 
   void alltoallv_init(int* input_sendbuffsize) {
-    if (commtype != CCUTILS_ALL2ALLV) {
-      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
-      MPI_Abort(MPI_COMM_WORLD, __LINE__);
-    }
+    if (commtype != CCUTILS_AUXBUFF_EMPTY) free_buffers();
+    commtype = CCUTILS_AUXBUFF_ALL2ALLV;
 
     send_count        = (int *)malloc(sizeof(int) * mycomm.size);
     recv_count        = (int *)malloc(sizeof(int) * mycomm.size);
@@ -92,15 +95,14 @@ public:
 
     compute_displacement_buffs(send_count, send_displacement);
     compute_displacement_buffs(recv_count, recv_displacement);
+    is_allocated = true;
   }
 
   /* Each rank provides the number of elements it sends.
      recv_count and recv_displacement are filled on all ranks. */
   void allgatherv_init(int input_sendbuffsize) {
-    if (commtype != CCUTILS_ALLGATHERV) {
-      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
-      MPI_Abort(MPI_COMM_WORLD, __LINE__);
-    }
+    if (commtype != CCUTILS_AUXBUFF_EMPTY) free_buffers();
+    commtype = CCUTILS_AUXBUFF_ALLGATHERV;
 
     send_count        = (int *)malloc(sizeof(int) * 1);
     recv_count        = (int *)malloc(sizeof(int) * mycomm.size);
@@ -116,15 +118,14 @@ public:
       nelements_recv += recv_count[i];
 
     compute_displacement_buffs(recv_count, recv_displacement);
+    is_allocated = true;
   }
 
   /* Each rank provides the number of elements it sends.
      Only root fills recv_count and recv_displacement. */
   void gatherv_init(int input_sendbuffsize) {
-    if (commtype != CCUTILS_GATHERV) {
-      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
-      MPI_Abort(MPI_COMM_WORLD, __LINE__);
-    }
+    if (commtype != CCUTILS_AUXBUFF_EMPTY) free_buffers();
+    commtype = CCUTILS_AUXBUFF_GATHERV;
 
     send_count = (int *)malloc(sizeof(int) * 1);
     if (mycomm.rank == root) {
@@ -145,15 +146,14 @@ public:
     } else {
       nelements_recv = 0;
     }
+    is_allocated = true;
   }
 
   /* Each rank provides the number of elements it expects to receive.
      Root gathers them all to build send_count and send_displacement. */
   void scatterv_init(int input_recvbuffsize) {
-    if (commtype != CCUTILS_SCATTERV) {
-      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
-      MPI_Abort(MPI_COMM_WORLD, __LINE__);
-    }
+    if (commtype != CCUTILS_AUXBUFF_EMPTY) free_buffers();
+    commtype = CCUTILS_AUXBUFF_SCATTERV;
 
     recv_count        = (int *)malloc(sizeof(int) * 1);
     recv_count[0]     = input_recvbuffsize;
@@ -174,20 +174,19 @@ public:
     } else {
       nelements_send = 0;
     }
+    is_allocated = true;
   }
 
   void print(FILE *fp = stdout) const {
     static const char *commtype_names[] = {
-      "ALLREDUCE", "ALL2ALL", "ALL2ALLV", "ALLGATHER", "ALLGATHERV",
-      "SCATTER", "SCATTERV", "GATHER", "GATHERV",
-      "PEER2PEER", "PINGPONG", "UNDEF"
+      "ALL2ALLV", "ALLGATHERV", "SCATTERV", "GATHERV", "EMPTY"
     };
 
-    int send_count_n = (commtype == CCUTILS_ALL2ALLV ||
-                        commtype == CCUTILS_SCATTERV) ? mycomm.size : 1;
-    int recv_count_n = (commtype == CCUTILS_ALL2ALLV  ||
-                        commtype == CCUTILS_ALLGATHERV ||
-                        commtype == CCUTILS_GATHERV)   ? mycomm.size : 1;
+    int send_count_n = (commtype == CCUTILS_AUXBUFF_ALL2ALLV ||
+                        commtype == CCUTILS_AUXBUFF_SCATTERV) ? mycomm.size : 1;
+    int recv_count_n = (commtype == CCUTILS_AUXBUFF_ALL2ALLV  ||
+                        commtype == CCUTILS_AUXBUFF_ALLGATHERV ||
+                        commtype == CCUTILS_AUXBUFF_GATHERV)   ? mycomm.size : 1;
 
     MPI_Barrier(mycomm.comm);
     if (mycomm.rank == 0) {
@@ -208,6 +207,34 @@ public:
         fflush(fp);
       }
       MPI_Barrier(mycomm.comm);
+    }
+  }
+
+  void check_alltoallv(void) {
+    if (commtype != CCUTILS_AUXBUFF_ALL2ALLV) {
+      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
+      MPI_Abort(MPI_COMM_WORLD, __LINE__);
+    }
+  }
+
+  void check_allgatherv(void) {
+    if (commtype != CCUTILS_AUXBUFF_ALLGATHERV) {
+      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
+      MPI_Abort(MPI_COMM_WORLD, __LINE__);
+    }
+  }
+
+  void check_gatherv(void) {
+    if (commtype != CCUTILS_AUXBUFF_GATHERV) {
+      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
+      MPI_Abort(MPI_COMM_WORLD, __LINE__);
+    }
+  }
+
+  void check_scatterv(void) {
+    if (commtype != CCUTILS_AUXBUFF_SCATTERV) {
+      fprintf(stderr, "Error: call of %s with commtype %d\n", __func__, commtype);
+      MPI_Abort(MPI_COMM_WORLD, __LINE__);
     }
   }
 };
