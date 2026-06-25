@@ -16,5 +16,6 @@ examples/mpi/Makefile
 examples/mpi/mpi_example
 examples/mpi/mpi_shuffle_example
 examples/mpi/mpi_mympicomm_example
+examples/mpi/mpi_vcollauxbuff_example
 examples/filelogger/output
 examples/filelogger/filelogger_example

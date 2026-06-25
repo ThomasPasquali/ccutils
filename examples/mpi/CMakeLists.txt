@@ -19,3 +19,6 @@ target_link_libraries(mpi_mympicomm_example PRIVATE ccutils::ccutils ccutils::cc
 
 add_executable(mpi_shuffle_example mpi_shuffle_example.cpp)
 target_link_libraries(mpi_shuffle_example PRIVATE ccutils::ccutils ccutils::ccutils_mpi)
+
+add_executable(mpi_vcollauxbuff_example mpi_vcollauxbuff_example.cpp)
+target_link_libraries(mpi_vcollauxbuff_example PRIVATE ccutils::ccutils ccutils::ccutils_mpi)
