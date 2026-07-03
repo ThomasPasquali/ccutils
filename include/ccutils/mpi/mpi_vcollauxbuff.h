@@ -6,6 +6,7 @@
 #endif
 
 #include <unistd.h>
+#include <stdint.h>
 #include <ccutils/mpi/mpi_mympicomm.h>
 
 typedef enum {
@@ -40,6 +41,19 @@ private:
       output[i] = output[i - 1] + input[i - 1];
   }
 
+  // MPI forces count/displacement vectors to be int32; if the local totals
+  // exceed INT32_MAX the displacement prefix sums overflow.
+  void check_int32_overflow(void) {
+    if (nelements_send > (size_t)INT32_MAX || nelements_recv > (size_t)INT32_MAX) {
+      fprintf(stderr,
+              "Error: local buffer size exceeds INT32_MAX "
+              "(nelements_send=%zu nelements_recv=%zu); MPI auxiliary "
+              "vectors are int32\n",
+              nelements_send, nelements_recv);
+      MPI_Abort(MPI_COMM_WORLD, __LINE__);
+    }
+  }
+
   void print_int_array(FILE *fp, const char *label, int *arr, int n) const {
     if (arr == nullptr) return;
     fprintf(fp, "[rank %d]   %-20s: ", mycomm.rank, label);
@@ -54,8 +68,8 @@ public:
   int *send_displacement;
   int *recv_displacement;
 
-  int nelements_send;
-  int nelements_recv;
+  size_t nelements_send;
+  size_t nelements_recv;
 
   CcutilsVcollectiveAuxiliaryBuffers(CcutilsMpiComm &comm_input,
                                         int root_input){
@@ -93,6 +107,7 @@ public:
     for (int i = 0; i < mycomm.size; i++)
       nelements_recv += recv_count[i];
 
+    check_int32_overflow();
     compute_displacement_buffs(send_count, send_displacement);
     compute_displacement_buffs(recv_count, recv_displacement);
     is_allocated = true;
@@ -117,6 +132,7 @@ public:
     for (int i = 0; i < mycomm.size; i++)
       nelements_recv += recv_count[i];
 
+    check_int32_overflow();
     compute_displacement_buffs(recv_count, recv_displacement);
     is_allocated = true;
   }
@@ -142,6 +158,7 @@ public:
       nelements_recv = 0;
       for (int i = 0; i < mycomm.size; i++)
         nelements_recv += recv_count[i];
+      check_int32_overflow();
       compute_displacement_buffs(recv_count, recv_displacement);
     } else {
       nelements_recv = 0;
@@ -170,6 +187,7 @@ public:
       nelements_send = 0;
       for (int i = 0; i < mycomm.size; i++)
         nelements_send += send_count[i];
+      check_int32_overflow();
       compute_displacement_buffs(send_count, send_displacement);
     } else {
       nelements_send = 0;
@@ -198,7 +216,7 @@ public:
 
     for (int r = 0; r < mycomm.size; r++) {
       if (r == mycomm.rank) {
-        fprintf(fp, "[rank %d] nelements_send=%-6d nelements_recv=%-6d\n",
+        fprintf(fp, "[rank %d] nelements_send=%-6zu nelements_recv=%-6zu\n",
                 mycomm.rank, nelements_send, nelements_recv);
         print_int_array(fp, "send_count",        send_count,        send_count_n);
         print_int_array(fp, "send_displacement", send_displacement, mycomm.size);
