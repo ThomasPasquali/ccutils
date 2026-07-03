@@ -71,7 +71,7 @@ public:
   size_t nelements_send;
   size_t nelements_recv;
 
-  CcutilsVcollectiveAuxiliaryBuffers(CcutilsMpiComm &comm_input,
+  CcutilsVcollectiveAuxiliaryBuffers(CcutilsMpiComm comm_input,
                                         int root_input){
     root     = root_input;
     mycomm   = comm_input;
@@ -84,6 +84,10 @@ public:
     nelements_send    = 0;
     nelements_recv    = 0;
     is_allocated      = false;
+  }
+
+  ~CcutilsVcollectiveAuxiliaryBuffers(void) {
+    free_buffers();
   }
 
   void alltoallv_init(int* input_sendbuffsize) {
