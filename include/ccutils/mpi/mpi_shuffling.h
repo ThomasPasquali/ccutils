@@ -46,7 +46,7 @@ private:
   }
 
 public:
-  MpiShufflingHelper(MPI_Comm input_comm, int indperproc) {
+  MpiShufflingHelper(MPI_Comm input_comm, int indperproc = 1) {
     comm.init(input_comm);
     indices_per_process = indperproc;
 
@@ -58,7 +58,11 @@ public:
     shuffle_indices();
   }
 
-  int get_index(int i) {
+  // Position of this rank's i-th local element in the global random
+  // permutation of [0, size * indices_per_process). With the default
+  // indices_per_process == 1, get_shuffled_position() returns this rank's
+  // spot in a permutation of [0, size).
+  int get_shuffled_position(int i = 0) {
     if (i >= indices_per_process) {
       fprintf(stderr,
               "[%d] Error: function %s required and index %d > the "
