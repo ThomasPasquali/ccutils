@@ -1,5 +1,5 @@
-#include <ccutils/timers.h>
-#include <ccutils/cuda/cuda_timers.h>
+#include <ccutils/timers.hpp>
+#include <ccutils/cuda/cuda_timers.hpp>
 #include <ccutils/cuda/cuda_utils.hpp>
 #include <cstdio>
 
@@ -20,10 +20,10 @@ int main() {
   float *d_a = h2d_copy(h_a.data(), N);
   float *d_b = h2d_copy(h_b.data(), N);
   float *d_c = nullptr;
-  CUDA_CHECK(cudaMalloc(&d_c, size));
+  CCUTILS_CUDA_CHECK(cudaMalloc(&d_c, size));
 
   // timing
-  CUDA_TIMER_DEF(add);
+  CCUTILS_CUDA_TIMER_DEF(add);
 
   // kernel config
   dim3 block(256);
@@ -31,10 +31,10 @@ int main() {
 
   // run kernel multiple times
   for (int iter = 0; iter < 10; iter++) {
-    CUDA_TIMER_START(add, 0);
+    CCUTILS_CUDA_TIMER_START(add, 0); // or CCUTILS_CUDA_TIMER_START_DEFAULT(add)
     add_kernel<<<grid, block>>>(d_a, d_b, d_c, N);
-    CHECK_CUDA(cudaDeviceSynchronize());
-    CUDA_TIMER_STOP(add);
+    CCUTILS_CUDA_CHECK(cudaDeviceSynchronize());
+    CCUTILS_CUDA_TIMER_STOP(add);
   }
 
   // copy back result
@@ -48,15 +48,15 @@ int main() {
   printf("Result check: %s\n", ok ? "PASSED" : "FAILED");
 
   // print stats
-  ccutils_timers::TimerStats stats = TIMER_STATS(add)
+  ccutils_timers::TimerStats stats = CCUTILS_TIMER_STATS(add)
   printf("<CUDA>[add_kernel] min=%.3f, max=%.3f\n", stats.min, stats.max);
-  TIMER_PRINT(add)
+  CCUTILS_TIMER_PRINT(add)
 
   // cleanup
-  CUDA_TIMER_DESTROY(add);
-  CUDA_FREE_SAFE(d_a);
-  CUDA_FREE_SAFE(d_b);
-  CUDA_FREE_SAFE(d_c);
+  CCUTILS_CUDA_TIMER_DESTROY(add);
+  CCUTILS_CUDA_FREE_SAFE(d_a);
+  CCUTILS_CUDA_FREE_SAFE(d_b);
+  CCUTILS_CUDA_FREE_SAFE(d_c);
   free(h_c);
 
   return 0;
