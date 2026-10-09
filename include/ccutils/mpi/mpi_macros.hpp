@@ -337,14 +337,17 @@ do {                                                                            
         __section_json_global_##name = new nlohmann::json(); \
     }
 
-#define CCUTILS_MPI_GLOBAL_JSON_PUT(name, key, value) \
-    if (ccutils_inmacro_myid == 0)                    \
-    {                                                 \
-        (*__section_json_global_##name)[key] = value; \
-    }
+#define CCUTILS_MPI_GLOBAL_JSON_PUT(name, key, ...) \
+  do { \
+    if (ccutils_inmacro_myid == 0) \
+      (*__section_json_global_##name)[key] = (__VA_ARGS__); \
+  } while (0)
 
-#define CCUTILS_MPI_LOCAL_JSON_PUT(name, key, value) \
-    __section_json_##name[key] = value;
+#define CCUTILS_MPI_LOCAL_JSON_PUT(name, key, ...) \
+  do { \
+    __section_json_##name[key] = (__VA_ARGS__); \
+  } while (0)
+
 #else
 #define CCUTILS_DECLARE_GLOBAL_JSON(name)
 #define CCUTILS_DECLARE_LOCAL_JSON(name)

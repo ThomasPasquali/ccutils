@@ -69,11 +69,11 @@
     fflush(stdout);                                          \
   } while (0);
 
-#define CCUTILS_SECTION_JSON_PUT(name, key, value) \
-  __section_json_##name[key] = value;
+#define CCUTILS_SECTION_JSON_PUT(name, key, ...) \
+  __section_json_##name[key] = (__VA_ARGS__);
 
-#define CCUTILS_SECTION_JSON_SUB_PUT(name, key1, key2, value) \
-  __section_json_##name[key1][key2] = (value);
+#define CCUTILS_SECTION_JSON_SUB_PUT(name, key1, key2, ...) \
+  __section_json_##name[key1][key2] = (__VA_ARGS__);
 
 #endif
 
