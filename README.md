@@ -1,38 +1,60 @@
-# CC Utils
+# CCUTILS
 
-Header-only collection of C/C++/CUDA/MPI utilities.
+CCUTILS is a header-only collection of small C++ utilities: structured output, timers, common macros, command-line argument parsing, and optional MPI and CUDA helpers. The core API requires C++11; examples use C++17. Optional modules require their respective toolkits.
 
 ## Features
 
-- **Structured Prints**. Organize output in sections and organize you output in Json-like style
-- **Domain-specific Macros**. CUDA errors checks, MPI prints that do not overlap.
-- **Timers**. Standardized prints and automatic statistics. Also specialized for CUDA and MPI.
-- **Python Output Parser Library**. Using the print macros allows for automatic parsing
-- **ANSI Colors**.
-- **Common Macros**. Asserts, common math operations
-- **CLI args parsing**. Using [`easyargs`](https://github.com/gouwsxander/easy-args/tree/main).
+- Named output sections with JSON records (or plain sections with `CCUTILS_NO_JSON`).
+- CPU timers with per-run values and summary statistics; MPI and CUDA timer headers are optional.
+- MPI rank output and MPI/CUDA error-checking helpers.
+- ANSI color constants, assertions, and math helpers.
+- The bundled single-header `easyargs` argument parser.
+- Importable Python parser for sections, JSON, MPI blocks, and timer records (`import ccutils_parser` after CMake installation).
 
-Organized into optional packages:
-- `ccutils` (always available)
-- `ccutils_cuda` (requires CUDA, enable with `-DCCUTILS_ENABLE_CUDA=ON`)
-- `ccutils_mpi` (requires MPI, enable with `-DCCUTILS_ENABLE_MPI=ON`)
+## Fast Install
 
-## Quick Installation (or Update)
+To automatically download and install the library in `$HOME/.local`, run:
+
+```bash
+# If needed, change the branch name
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash
+```
 
 > [!IMPORTANT]
 > Currently, CMake is required for installation.
 
-```bash
-# If needed, change the branch name
-wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/ccutils_json/install.sh | env bash
+## Manual Install
+
+CCUTILS uses CMake to install. CMake downloads the header-only JSON dependency while configuring and requires Python 3.8+ to install the importable output parser. After installation, C++ consumers need no separate JSON package.
+
+```sh
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+cmake --build build
+cmake --install build
 ```
 
-If you prefer to install *CCUTILS* manually, please refer to [docs/INSTALL.md](docs/INSTALL.md)
+The interactive installer can also use an existing local checkout: `./install.sh --repo /path/to/ccutils`.
+
+Enable optional modules with `-DCCUTILS_ENABLE_MPI=ON` or `-DCCUTILS_ENABLE_CUDA=ON`. See [installation and integration](docs/INSTALL.md) for Make, CMake, and FetchContent examples.
+
+## Minimal use
+
+```cpp
+#include <ccutils/ccutils.hpp>
+
+int main() {
+    CCUTILS_SECTION_DEF(run, "Run information")
+    CCUTILS_SECTION_JSON_PUT(run, "status", "ok")
+    CCUTILS_SECTION_END(run)
+}
+```
+
+Link `ccutils::ccutils` in CMake, or add the install `include` directory to your Make compiler flags. Full macro and format behavior is documented in [the API guide](docs/API.md).
+
+## Output and parsing
+
+Section markers and JSON block markers are stable line-oriented delimiters. JSON records are valid JSON and emitted only for nonempty sections. Timer macros emit versioned key/value records only when there are samples; records can be mixed with free-form output and selected by their `CCUTILS_TIMER` prefix. Set `CCUTILS_COLOR_LEVEL` from 0 (no color) to 3 (bright foreground and background colors) to choose ANSI color intensity. See [the API guide](docs/API.md) and [parser documentation](docs/examples/PARSER.md).
 
 ## Examples
 
-* Compile: [CMake](examples/CMakeLists.txt) or [Makefile](examples/Makefile)
-* [Timers](docs/examples/TIMERS.md)
-* [Prints](docs/examples/PRINTS.md) + [Python Parser](docs/examples/PARSER.md)
-* [Cuda-Specific](docs/examples/CUDA_MACROS.md)
-* [MPI-Specific](docs/examples/MPI_MACROS.md)
+Build examples with CMake or Make from `examples/`. See [prints](docs/examples/PRINTS.md), [timers](docs/examples/TIMERS.md), [MPI](docs/examples/MPI_MACROS.md), and [CUDA](docs/examples/CUDA_MACROS.md).

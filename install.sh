@@ -11,8 +11,54 @@ INSTALL_DIR="$INSTALL_PREFIX/ccutils/install"
 INSTALL_BIN="$INSTALL_PREFIX/bin"
 
 REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
-# FIXME set to main
-REPO_BRANCH="ccutils_json"
+REPO_BRANCH="main"
+SOURCE_DIR=""
+
+usage() {
+    cat <<'USAGE'
+Usage: install.sh [--repo PATH]
+
+Install from the default CCUTILS repository, or pass the path to an existing
+local CCUTILS clone with --repo. A supplied clone is used as-is and is not
+pulled or otherwise updated.
+USAGE
+}
+
+while (($#)); do
+    case "$1" in
+        --repo)
+            if (($# < 2)) || [[ -z "$2" ]]; then
+                echo "Error: --repo requires a path to a local clone." >&2
+                usage >&2
+                exit 2
+            fi
+            SOURCE_DIR="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Error: unknown argument: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [[ -n "$SOURCE_DIR" ]]; then
+    if [[ ! -d "$SOURCE_DIR" ]]; then
+        echo "Error: repository directory does not exist: $SOURCE_DIR" >&2
+        exit 2
+    fi
+    SOURCE_DIR="$(cd -- "$SOURCE_DIR" && pwd -P)"
+    GIT_ROOT="$(git -C "$SOURCE_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ ! -f "$SOURCE_DIR/CMakeLists.txt" ]] || [[ "$GIT_ROOT" != "$SOURCE_DIR" ]]; then
+        echo "Error: --repo must point to the root of a Git checkout containing CMakeLists.txt." >&2
+        exit 2
+    fi
+fi
 
 #####################################
 # FUNCTIONS
@@ -92,6 +138,9 @@ ensure_line_present() {
 #####################################
 
 echo "--------- ccutils Installation Options ---------"
+if [[ -n "$SOURCE_DIR" ]]; then
+    echo "Source clone: $SOURCE_DIR"
+fi
 ENABLE_CUDA=OFF
 ENABLE_MPI=OFF
 
@@ -117,18 +166,24 @@ echo
 GREEN="\033[32m"
 RESET="\033[0m"
 
-echo -e "${GREEN}[1] Creating installation directory at $PKG_DIR ...${RESET}"
-mkdir -p "$PKG_DIR"
-
-echo -e "${GREEN}[2] Cloning or updating repository...${RESET}"
-if [ ! -d "$PKG_DIR/.git" ]; then
-    git clone -b "$REPO_BRANCH" "$REPO_URL" "$PKG_DIR"
+if [[ -n "$SOURCE_DIR" ]]; then
+    echo -e "${GREEN}[1] Using local repository clone at $SOURCE_DIR ...${RESET}"
+    BUILD_SOURCE_DIR="$SOURCE_DIR"
 else
-    echo "Repository already exists. Pulling latest changes..."
-    git -C "$PKG_DIR" pull --rebase
+    echo -e "${GREEN}[1] Creating installation directory at $PKG_DIR ...${RESET}"
+    mkdir -p "$PKG_DIR"
+    echo -e "${GREEN}[2] Cloning or updating repository...${RESET}"
+    if [ ! -d "$PKG_DIR/.git" ]; then
+        git clone -b "$REPO_BRANCH" "$REPO_URL" "$PKG_DIR"
+    else
+        echo "Repository already exists. Pulling latest changes..."
+        git -C "$PKG_DIR" pull --rebase
+    fi
+    BUILD_SOURCE_DIR="$PKG_DIR"
 fi
+mkdir -p "$INSTALL_BIN"
 
-cd "$PKG_DIR"
+cd "$BUILD_SOURCE_DIR"
 
 echo -e "${GREEN}[3] Configuring CMake...${RESET}"
 cmake -B build -S . \
@@ -153,23 +208,34 @@ echo "Using RC file: $RC_FILE"
 
 # Update CMAKE_PREFIX_PATH
 ensure_line_present "$RC_FILE" \
-"export CMAKE_PREFIX_PATH=\"$INSTALL_DIR/lib/cmake/ccutils:\$CMAKE_PREFIX_PATH\""
+"export CMAKE_PREFIX_PATH=\"$INSTALL_DIR:\$CMAKE_PREFIX_PATH\""
 ensure_line_present "$RC_FILE" \
 "export CCUTILS_INCLUDE=\"$INSTALL_DIR/include\""
+PYTHON_SITE_REL=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib', vars={'base': '_CCUTILS_PREFIX_', 'platbase': '_CCUTILS_PREFIX_'}).replace('_CCUTILS_PREFIX_', '', 1).lstrip('/\\\\'))")
+ensure_line_present "$RC_FILE" \
+"export PYTHONPATH=\"$INSTALL_DIR/$PYTHON_SITE_REL:\$PYTHONPATH\""
 ensure_line_present "$RC_FILE" \
 "export PATH=\"$INSTALL_BIN:\$PATH\""
 
-# Add updater command to PATH
-cd "$INSTALL_BIN"
-wget "https://raw.githubusercontent.com/ThomasPasquali/ccutils/${REPO_BRANCH}/install.sh"
-mv install.sh ccutils-upgrade
-chmod +x ccutils-upgrade
+# Add the upstream updater only for the default source. A custom clone may be
+# a fork or a worktree, so replacing it with an upstream updater would switch
+# the next upgrade to a different source.
+if [[ -z "$SOURCE_DIR" ]]; then
+    cd "$INSTALL_BIN"
+    wget "https://raw.githubusercontent.com/ThomasPasquali/ccutils/${REPO_BRANCH}/install.sh"
+    mv install.sh ccutils-upgrade
+    chmod +x ccutils-upgrade
+fi
 
 echo
 echo -e "${GREEN}Installation complete."
 echo -e "To activate changes, run:${RESET}"
 echo "    source \"$RC_FILE\""
 echo
-echo -e "${GREEN}To upgrade CCUTILS, run:${RESET}"
-echo "    ccutils-upgrade"
+if [[ -z "$SOURCE_DIR" ]]; then
+    echo -e "${GREEN}To upgrade CCUTILS, run:${RESET}"
+    echo "    ccutils-upgrade"
+else
+    echo "This install used a local clone. Re-run install.sh --repo with that clone to update it."
+fi
 echo

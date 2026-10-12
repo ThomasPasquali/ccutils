@@ -7,6 +7,9 @@
 #include <cmath>
 #include <cstdio>
 #include <limits>
+#include <cstdint>
+#include <cstddef>
+#include <string>
 #include "formats.h"
 #include "colors.h"
 
@@ -15,6 +18,36 @@
 /**********************************************************************/
 
 namespace ccutils_timers {
+
+  // Quote labels as JSON strings so key/value records remain one line and
+  // callers can safely use spaces, quotes, backslashes, or control characters.
+  inline std::string quote_field(const char* value) {
+    std::string result("\"");
+    if (value != nullptr) {
+      static const char hex[] = "0123456789abcdef";
+      for (const unsigned char ch : std::string(value)) {
+        switch (ch) {
+          case '"': result += "\\\""; break;
+          case '\\': result += "\\\\"; break;
+          case '\b': result += "\\b"; break;
+          case '\f': result += "\\f"; break;
+          case '\n': result += "\\n"; break;
+          case '\r': result += "\\r"; break;
+          case '\t': result += "\\t"; break;
+          default:
+            if (ch < 0x20) {
+              result += "\\u00";
+              result += hex[ch >> 4];
+              result += hex[ch & 0x0f];
+            } else {
+              result += static_cast<char>(ch);
+            }
+        }
+      }
+    }
+    result += '"';
+    return result;
+  }
   
   /********************************************************************/
   /*                           TIMER STATS                             */
@@ -35,7 +68,7 @@ namespace ccutils_timers {
     stats.n = values.size() - exclude_first_n;
     if (stats.n == 0) return stats;
 
-    for (int i = exclude_first_n; i < values.size(); i++) {
+    for (std::size_t i = exclude_first_n; i < values.size(); i++) {
       stats.sum += values[i];
       if (values[i] < stats.min) stats.min = values[i];
       if (values[i] > stats.max) stats.max = values[i];
@@ -45,7 +78,7 @@ namespace ccutils_timers {
 
     if (stats.n > 1) {
       float var = 0.0f;
-      for (int i = exclude_first_n; i < values.size(); i++) {
+      for (std::size_t i = exclude_first_n; i < values.size(); i++) {
         float diff = values[i] - stats.avg;
         var += diff * diff;
       }
@@ -63,39 +96,30 @@ namespace ccutils_timers {
     TimerStats stats = compute_stats(values, exclude_first_n);
 
     if (stats.n == 0) {
-      printf(CCUTILS_FMT_TIMER_WARN, prefix, name);
-      return;
-    }
-
-    if (stats.n == 1) {
-      printf(CCUTILS_FMT_TIMER_SINGLE, prefix, name, values.front());
       return;
     }
 
     printf(CCUTILS_FMT_TIMER_MULTIPLE,
-           prefix, name,
+           quote_field(prefix).c_str(), quote_field(name).c_str(),
            stats.n, stats.avg, stats.stddev,
            stats.min, stats.max, stats.sum);
   }
 
   inline void print_last_time(const std::vector<float>& values, const char* name, const char* prefix) {
     if (values.empty()) {
-      printf(CCUTILS_FMT_TIMER_WARN, prefix, name);
       return;
     }
-    printf(CCUTILS_FMT_TIMER_SINGLE, prefix, name, values.back());
+    printf(CCUTILS_FMT_TIMER_SINGLE,
+           quote_field(prefix).c_str(), quote_field(name).c_str(), values.back());
   }
 
   inline void print_all_times(const std::vector<float>& values, const char* name) {
     if (values.empty()) {
-      printf(CCUTILS_FMT_TIMER_WARN, "Timer", name);
       return;
     }
-    printf(CCUTILS_FMT_TIMER_ALL, name);
     for (size_t i = 0; i < values.size(); i++) {
-      printf("Run %2zu: %f ms\n", i, values[i]);
+      printf(CCUTILS_FMT_TIMER_ALL, quote_field(name).c_str(), i, values[i]);
     }
-    printf(RESET);
   }
 
   inline TimerStats get_timer_stats(const std::vector<float>& values) {
@@ -194,14 +218,28 @@ namespace ccutils_timers {
     return __sum; \
   }())
 
+#define CCUTILS_TIMER_HAS_VALUES(...) \
+  ([&]() -> bool { \
+    std::vector<std::vector<float>*> __timer_vectors = {__MAP(__TIMER_PTR, __VA_ARGS__)}; \
+    for (const auto* __timer_vector : __timer_vectors) \
+      if (!__timer_vector->empty()) return true; \
+    return false; \
+  }())
+
 #define CCUTILS_TIMER_SUM_PRINT(label, ...) \
-  printf(CCUTILS_FMT_TIMER_SUM, "TimerSum", #label, CCUTILS_TIMER_SUM(__VA_ARGS__));
+  do { if (CCUTILS_TIMER_HAS_VALUES(__VA_ARGS__)) \
+    printf(CCUTILS_FMT_TIMER_SUM, "sum", ccutils_timers::quote_field(#label).c_str(), CCUTILS_TIMER_SUM(__VA_ARGS__)); \
+  } while (0);
 
 #define CCUTILS_TIMER_SUM_AVG_PRINT(label, ...) \
-  printf(CCUTILS_FMT_TIMER_SUM, "TimerSumAvg", #label, CCUTILS_TIMER_SUM_AVG(__VA_ARGS__));
+  do { if (CCUTILS_TIMER_HAS_VALUES(__VA_ARGS__)) \
+    printf(CCUTILS_FMT_TIMER_SUM, "sum_avg", ccutils_timers::quote_field(#label).c_str(), CCUTILS_TIMER_SUM_AVG(__VA_ARGS__)); \
+  } while (0);
 
 #define CCUTILS_TIMER_SUM_LAST_PRINT(label, ...) \
-  printf(CCUTILS_FMT_TIMER_SUM, "TimerSumLast", #label, CCUTILS_TIMER_SUM_LAST(__VA_ARGS__));
+  do { if (CCUTILS_TIMER_HAS_VALUES(__VA_ARGS__)) \
+    printf(CCUTILS_FMT_TIMER_SUM, "sum_last", ccutils_timers::quote_field(#label).c_str(), CCUTILS_TIMER_SUM_LAST(__VA_ARGS__)); \
+  } while (0);
 
 
 /**********************************************************************/
@@ -209,34 +247,30 @@ namespace ccutils_timers {
 /**********************************************************************/
 
 #define CCUTILS_CPU_TIMER_DEF(name) \
-  std::chrono::high_resolution_clock::time_point __timer_start_##name, __timer_stop_##name; \
+  std::chrono::steady_clock::time_point __timer_start_##name, __timer_stop_##name; \
   std::vector<float> __timer_vals_##name;
 
 #define CCUTILS_CPU_TIMER_IMPORT(name)                                   \
-  extern chrono::high_resolution_clock::time_point __timer_start_##name; \
-  extern chrono::high_resolution_clock::time_point __timer_stop_##name;  \
+  extern std::chrono::steady_clock::time_point __timer_start_##name; \
+  extern std::chrono::steady_clock::time_point __timer_stop_##name;  \
   extern std::vector<float> __timer_vals_##name;
 
 #define CCUTILS_CPU_TIMER_START(name) \
-  __timer_start_##name = std::chrono::high_resolution_clock::now();
+  __timer_start_##name = std::chrono::steady_clock::now();
 
 // Time is reported in milliseconds
 #define CCUTILS_CPU_TIMER_STOP(name) \
   do { \
-    __timer_stop_##name = std::chrono::high_resolution_clock::now(); \
+    __timer_stop_##name = std::chrono::steady_clock::now(); \
     float __elapsed_##name = std::chrono::duration<float>(__timer_stop_##name - __timer_start_##name).count() * 1e3f; \
     __timer_vals_##name.push_back(__elapsed_##name); \
   } while (0);
 
 #define CCUTILS_CPU_TIMER_STATS(name, avg, stddev) \
   do { \
-    size_t n_##name = __timer_vals_##name.size(); \
-    float sum_##name = 0.0f; \
-    for (float v : __timer_vals_##name) sum_##name += v; \
-    avg = sum_##name / n_##name; \
-    float var_##name = 0.0f; \
-    for (float v : __timer_vals_##name) var_##name += (v - avg) * (v - avg); \
-    stddev = (n_##name > 1) ? std::sqrt(var_##name / (n_##name - 1)) : 0.0f; \
+    auto stats_##name = ccutils_timers::compute_stats(__timer_vals_##name); \
+    avg = stats_##name.avg; \
+    stddev = stats_##name.stddev; \
   } while (0);
 
 #define CCUTILS_CPU_TIMER_INIT(name) CCUTILS_CPU_TIMER_DEF(name) CCUTILS_CPU_TIMER_START(name)

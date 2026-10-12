@@ -1,92 +1,64 @@
-# Manual Installation Guide
+# Installation and integration
 
-```bash
-git clone https://github.com/ThomasPasquali/ccutils.git
-cd ccutils
-cmake -B build -S . -DCCUTILS_ENABLE_CUDA=ON -DCCUTILS_ENABLE_MPI=ON
+## Install from a checkout
+
+```sh
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX="$HOME/.local"
 cmake --build build
-cmake --install build --prefix /your/install/path
+cmake --install build
 ```
 
-You can omit `-DCCUTILS_ENABLE_XXX=ON` if you do not need to enable a specific package.
+CMake obtains nlohmann/json during configuration and installs its headers alongside CCUTILS. This is the only install-time download. MPI and CUDA are disabled by default:
 
-## Usage in CMake Projects
+To use the interactive installer with a local clone or fork, pass its checkout root:
 
-### Fetch and Build Automatically (Recommended)
+```sh
+./install.sh --repo /path/to/ccutils
+```
 
-Via `FetchContent`, no need to manually download, build and install.
+The installer builds that checkout as-is and does not pull it. In local-clone mode it does not install the upstream `ccutils-upgrade` command; rerun `install.sh --repo /path/to/ccutils` after updating the clone.
+
+```sh
+cmake -S . -B build \
+  -DCMAKE_INSTALL_PREFIX="$HOME/.local" \
+  -DCCUTILS_ENABLE_MPI=ON \
+  -DCCUTILS_ENABLE_CUDA=ON
+```
+
+Enabling a module requires a usable MPI C++ implementation or CUDA toolkit. The install exports only targets enabled at configure time.
+
+The Python output parser (Python 3.8 or newer) is installed as `ccutils_parser.py` into the selected interpreter's site-packages directory. It can then be imported with `import ccutils_parser`. If you choose a custom install prefix outside Python's active search paths, add the corresponding `lib/pythonX.Y/site-packages` directory under that prefix to `PYTHONPATH`.
+
+## CMake consumer
 
 ```cmake
-# Enable CUDA and MPI (optional)
-set(CCUTILS_ENABLE_CUDA ON  CACHE BOOL "")
-set(CCUTILS_ENABLE_MPI  ON  CACHE BOOL "")
+find_package(ccutils 1 CONFIG REQUIRED)
+add_executable(myapp main.cpp)
+target_link_libraries(myapp PRIVATE ccutils::ccutils)
+```
 
-# Download automatically with CMake
+Use `ccutils::ccutils_mpi` and/or `ccutils::ccutils_cuda` for enabled optional modules. Point CMake at a nonstandard prefix using `-DCMAKE_PREFIX_PATH=/path/to/prefix` or `-Dccutils_DIR=/path/to/prefix/lib/cmake/ccutils`.
+
+## FetchContent or subdirectory
+
+```cmake
 include(FetchContent)
-FetchContent_Declare(
-  ccutils
-  GIT_REPOSITORY https://github.com/ThomasPasquali/ccutils.git
-  # GIT_TAG v1.0.0
-)
+FetchContent_Declare(ccutils GIT_REPOSITORY https://github.com/ThomasPasquali/ccutils.git GIT_TAG v1.0.0)
 FetchContent_MakeAvailable(ccutils)
-
-# Link to your project
-target_link_libraries(myapp PRIVATE ccutils::ccutils)        # Base macros
-target_link_libraries(myapp PRIVATE ccutils::ccutils_cuda)   # CUDA (if enabled)
-target_link_libraries(myapp PRIVATE ccutils::ccutils_mpi)    # MPI  (if enabled)
+target_link_libraries(myapp PRIVATE ccutils::ccutils)
 ```
 
-### Add CMake Subdirectory
+For `add_subdirectory`, add the repository to the parent project and link the same exported build target. Set `CCUTILS_ENABLE_MPI` or `CCUTILS_ENABLE_CUDA` before adding it.
 
-```cmake
-# Enable CUDA and MPI (optional)
-set(CCUTILS_ENABLE_CUDA ON CACHE BOOL "Enable CUDA support in ccutils")
-set(CCUTILS_ENABLE_MPI ON CACHE BOOL "Enable MPI support in ccutils")
-
-add_subdirectory(ccutils)
-
-# Link to your project
-target_link_libraries(myapp PRIVATE ccutils::ccutils ccutils::ccutils_cuda ccutils::ccutils_mpi)
-```
-
-### Link Installed Library
-
-```cmake
-find_package(ccutils REQUIRED) # Here you need to ensure CMake knows the installation path
-
-# Link to your project
-target_link_libraries(myapp PRIVATE ccutils::ccutils)        # Base macros
-target_link_libraries(myapp PRIVATE ccutils::ccutils_cuda)   # CUDA (if enabled)
-target_link_libraries(myapp PRIVATE ccutils::ccutils_mpi)    # MPI  (if enabled)
-
-```
-> [!NOTE]  
-> Ensure to pass `ccutils` installation path to CMake.  
-> Option 1: add `-Dccutils_DIR=/your/install/path` to your build command.  
-> Option 2: append to CMAKE PREFIX PATH by adding to your CMake file `list(APPEND CMAKE_PREFIX_PATH "/your/install/path")`  
-
-
-## Usage in Makefile Projects
-
-This library is **header-only**. You just need to add the `include/` folder to your compiler flags.
-
-> [!NOTE]
-> CMake is required to instal CCUTILS anyway
-
-First, make sure to have CCUTILS code on your system. Then, add the following to your makefile:
+## Make consumer
 
 ```make
-# Substitute `path/to` with your ccutils path
-CCUTILS = path/to/ccutils/install/include
-CXXFLAGS += -I$(CCUTILS)
-
-$(CCUTILS):
-	cd path/to/ccutils && \
-	cmake -S . -B build -DCCUTILS_ENABLE_MPI=ON && \
-	cmake --build build && \
-	cmake --install build --prefix ./install
-
-# Ensure targets that depend on CCUTILS will build it if needed
-my_target: ... $(CCUTILS) ...
-  ...
+CCUTILS_PREFIX ?= $(HOME)/.local
+CXXFLAGS += -I$(CCUTILS_PREFIX)/include
 ```
+
+Then include `<ccutils/ccutils.hpp>` or individual headers. Add `-DCCUTILS_ENABLE_MPI` and link through `mpicxx` for MPI. Compile CUDA sources with `nvcc` (or a CUDA enabled CMake target) and define `CCUTILS_ENABLE_CUDA`.
+
+JSON output is enabled by default. To use core headers without JSON, define `CCUTILS_NO_JSON` before including CCUTILS; section JSON put macros then become no-ops. `macros.hpp` requires C++11 or newer.
+
+Choose ANSI color intensity per consuming target with `CCUTILS_COLOR_LEVEL=0` (none) through `3` (bright foregrounds and colored CCUTILS markers). Level 2 is the default; `CCUTILS_NO_COLOR` remains an alias for level 0.

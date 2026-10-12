@@ -53,7 +53,7 @@
 /*                        MPI ALL PRINT MACROS                        */
 /**********************************************************************/
 
-#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                      \
+#define CCUTILS_MPI_ALL_PRINT_IMPL(_CCUTILS_PRINT_NAME, PRINTS_CODE_BLOCK)           \
 do {                                                                                  \
     int _ccutils_myid, _ccutils_numprocs;                                             \
     MPI_Comm_rank(MPI_COMM_WORLD, &_ccutils_myid);                                    \
@@ -64,9 +64,7 @@ do {                                                                            
     size_t _ccutils_bsz = 0;                                                          \
     FILE  *fp = open_memstream(&_ccutils_buf, &_ccutils_bsz);                         \
     if (fp != NULL) {                                                                 \
-        fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_START, _ccutils_myid);                  \
         PRINTS_CODE_BLOCK;                                                            \
-        fprintf(fp, CCUTILS_FMT_MPI_PRINT_ALL_END, _ccutils_myid);                    \
         fclose(fp);                                                                   \
     } else {                                                                          \
         fprintf(stderr, "[Rank %d] WARNING: open_memstream failed, "                  \
@@ -130,8 +128,25 @@ do {                                                                            
     if (_ccutils_myid == 0) {                                                         \
         int _ccutils_total_size = _ccutils_displs[_ccutils_numprocs - 1]              \
                                 + _ccutils_recvcounts[_ccutils_numprocs - 1];         \
-        fwrite(_ccutils_recvbuf, 1, _ccutils_total_size, stdout);                     \
-        fflush(stdout);                                                               \
+        if (_ccutils_total_size > 0) {                                                \
+            if ((_CCUTILS_PRINT_NAME) != NULL)                                       \
+                printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, _CCUTILS_PRINT_NAME);  \
+            for (int _ccutils_rank = 0; _ccutils_rank < _ccutils_numprocs;            \
+                 ++_ccutils_rank) {                                                  \
+                int _ccutils_rank_size = _ccutils_recvcounts[_ccutils_rank];          \
+                if (_ccutils_rank_size == 0) continue;                               \
+                printf(CCUTILS_FMT_MPI_PRINT_ALL_START, _ccutils_rank);               \
+                fwrite(_ccutils_recvbuf + _ccutils_displs[_ccutils_rank],             \
+                       1, (size_t)_ccutils_rank_size, stdout);                        \
+                if (_ccutils_recvbuf[_ccutils_displs[_ccutils_rank] +                 \
+                                     _ccutils_rank_size - 1] != '\n')                \
+                    fputc('\n', stdout);                                             \
+                printf(CCUTILS_FMT_MPI_PRINT_ALL_END, _ccutils_rank);                 \
+            }                                                                         \
+            if ((_CCUTILS_PRINT_NAME) != NULL)                                       \
+                printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END, _CCUTILS_PRINT_NAME);    \
+            fflush(stdout);                                                          \
+        }                                                                             \
         free(_ccutils_recvcounts);                                                    \
         free(_ccutils_displs);                                                        \
         free(_ccutils_recvbuf);                                                       \
@@ -141,12 +156,11 @@ do {                                                                            
     MPI_Barrier(MPI_COMM_WORLD);                                                      \
 } while (0); 
 
+#define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK) \
+    CCUTILS_MPI_ALL_PRINT_IMPL(NULL, PRINTS_CODE_BLOCK)
 
-#define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) {                         \
-    CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_START, #print_name))       \
-        CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK)                                             \
-            CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_MPI_PRINT_ALL_NAMED_END, #print_name)) \
-                CCUTILS_FLUSH_WAIT(200000)}
+#define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) \
+    CCUTILS_MPI_ALL_PRINT_IMPL(#print_name, PRINTS_CODE_BLOCK)
 
 /**********************************************************************/
 /*                       MPI PROCESS PRINT MACROS                         */
@@ -252,12 +266,16 @@ do {                                                                            
         fp = fopen(fname, "r");                                              \
         if (fp != NULL)                                                      \
         {                                                                    \
-            printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_START,                     \
-                   ccutils_inmacro_myid);                                    \
-                                                                             \
-            int c;                                                           \
-            while ((c = fgetc(fp)) != EOF)                                   \
+            int c = fgetc(fp);                                              \
+            int has_content = c != EOF;                                     \
+            if (has_content)                                                 \
+            {                                                                \
+                printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_START,                 \
+                       ccutils_inmacro_myid);                                \
                 putchar(c);                                                  \
+                while ((c = fgetc(fp)) != EOF)                              \
+                    putchar(c);                                              \
+            }                                                                \
                                                                              \
             fclose(fp);                                                      \
                                                                              \
@@ -268,8 +286,9 @@ do {                                                                            
                         "MPI_BUFFERED_PRINT_FLUSH: could not remove file."); \
             }                                                                \
                                                                              \
-            printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_END,                       \
-                   ccutils_inmacro_myid);                                    \
+            if (has_content)                                                 \
+                printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_END,                   \
+                       ccutils_inmacro_myid);                                \
         }                                                                    \
     }
 
@@ -298,12 +317,16 @@ do {                                                                            
                 FILE *fp = fopen(fname, "r");                                   \
                 if (fp != NULL)                                                 \
                 {                                                               \
-                    printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_START,                \
-                           ccutils_inmacro_myid);                               \
-                                                                                \
-                    int c;                                                      \
-                    while ((c = fgetc(fp)) != EOF)                              \
+                    int c = fgetc(fp);                                          \
+                    int has_content = c != EOF;                                 \
+                    if (has_content)                                            \
+                    {                                                           \
+                        printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_START,            \
+                               ccutils_inmacro_myid);                           \
                         putchar(c);                                             \
+                        while ((c = fgetc(fp)) != EOF)                          \
+                            putchar(c);                                         \
+                    }                                                           \
                                                                                 \
                     fclose(fp);                                                 \
                                                                                 \
@@ -314,9 +337,12 @@ do {                                                                            
                                 "MPI_BUFFERED_PRINT_ALL_FLUSH: could not rm."); \
                     }                                                           \
                                                                                 \
-                    printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_END,                  \
-                           ccutils_inmacro_myid);                               \
-                    fflush(stdout);                                             \
+                    if (has_content)                                            \
+                    {                                                           \
+                        printf(CCUTILS_FMT_MPI_PRINT_BUFFERED_END,              \
+                               ccutils_inmacro_myid);                           \
+                        fflush(stdout);                                         \
+                    }                                                           \
                 }                                                               \
             }                                                                   \
                                                                                 \
@@ -348,9 +374,49 @@ do {                                                                            
     __section_json_##name[key] = (__VA_ARGS__); \
   } while (0)
 
+/* Rank-local named JSON object. PRINT gathers nonempty objects and preserves
+ * rank identity in the standard MPI ALL PRINT format. */
+#define CCUTILS_MPI_JSON_DEF(name) nlohmann::json ccutils_mpi_json_##name
+#define CCUTILS_MPI_JSON_PUT(name, key, ...) \
+  (ccutils_mpi_json_##name[key] = (__VA_ARGS__));
+#define CCUTILS_MPI_JSON_SUB_PUT(name, key1, key2, ...) \
+  (ccutils_mpi_json_##name[key1][key2] = (__VA_ARGS__));
+#define CCUTILS_MPI_JSON_PRINT(name) \
+  do { \
+    CCUTILS_MPI_ALL_PRINT_NAMED(name, \
+      if (!ccutils_mpi_json_##name.empty()) \
+        fprintf(fp, "%s\n", CCUTILS_JSON_DUMP(ccutils_mpi_json_##name).c_str())); \
+    ccutils_mpi_json_##name.clear(); \
+  } while (0);
+
+#define CCUTILS_MPI_SUBSECTION_DEF(section, subsection, title) \
+  nlohmann::json ccutils_mpi_subsection_json_##section##_##subsection; \
+  CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_SECTION_START, #subsection, title); fflush(stdout));
+#define CCUTILS_MPI_SUBSECTION_JSON_PUT(section, subsection, key, ...) \
+  (ccutils_mpi_subsection_json_##section##_##subsection[key] = (__VA_ARGS__));
+#define CCUTILS_MPI_SUBSECTION_JSON_SUB_PUT(section, subsection, key1, key2, ...) \
+  (ccutils_mpi_subsection_json_##section##_##subsection[key1][key2] = (__VA_ARGS__));
+#define CCUTILS_MPI_SUBSECTION_END(section, subsection) do { \
+  CCUTILS_MPI_ALL_PRINT_NAMED(ccutils_subsection_json, \
+    if (!ccutils_mpi_subsection_json_##section##_##subsection.empty()) \
+      fprintf(fp, "%s\n", CCUTILS_JSON_DUMP(ccutils_mpi_subsection_json_##section##_##subsection).c_str())); \
+  ccutils_mpi_subsection_json_##section##_##subsection.clear(); \
+  CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_SECTION_END, #subsection); fflush(stdout)); \
+} while (0);
+
 #else
 #define CCUTILS_DECLARE_GLOBAL_JSON(name)
 #define CCUTILS_DECLARE_LOCAL_JSON(name)
+#define CCUTILS_MPI_JSON_DEF(name)
+#define CCUTILS_MPI_JSON_PUT(name, key, ...) ((void)0);
+#define CCUTILS_MPI_JSON_SUB_PUT(name, key1, key2, ...) ((void)0);
+#define CCUTILS_MPI_JSON_PRINT(name) ((void)0);
+#define CCUTILS_MPI_SUBSECTION_DEF(section, subsection, title) \
+  CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_SECTION_START, #subsection, title); fflush(stdout));
+#define CCUTILS_MPI_SUBSECTION_JSON_PUT(section, subsection, key, ...) ((void)0);
+#define CCUTILS_MPI_SUBSECTION_JSON_SUB_PUT(section, subsection, key1, key2, ...) ((void)0);
+#define CCUTILS_MPI_SUBSECTION_END(section, subsection) \
+  CCUTILS_MPI_PRINT_ONCE(printf(CCUTILS_FMT_SECTION_END, #subsection); fflush(stdout));
 #endif
 
 /**********************************************************************/
@@ -365,16 +431,19 @@ do {                                                                            
 #define CCUTILS_MPI_SECTION_END(name)                                                                                 \
     do                                                                                                                \
     {                                                                                                                 \
-        if (!__section_json_##name.empty())                                                                           \
-            CCUTILS_MPI_ALL_PRINT_NAMED(ccutils_rank_json, fprintf(fp, "%s\n", __section_json_##name.dump().c_str())) \
-        if (ccutils_inmacro_myid == 0)                                                                                \
-            __section_json_##name.clear();                                                                            \
-        if (__section_json_global_##name && !__section_json_global_##name->empty())                                   \
+        CCUTILS_MPI_ALL_PRINT_NAMED(ccutils_rank_json,                                                                  \
+            if (!__section_json_##name.empty())                                                                         \
+                fprintf(fp, "%s\n", CCUTILS_JSON_DUMP(__section_json_##name).c_str()));                              \
+        __section_json_##name.clear();                                                                                \
+        if (__section_json_global_##name)                                                                             \
         {                                                                                                             \
-            printf(CCUTILS_FMT_GLOBAL_JSON_START, "ccutils_global_json");                                             \
-            printf("%s\n", __section_json_global_##name->dump().c_str());                                             \
-            printf(CCUTILS_FMT_GLOBAL_JSON_END, "ccutils_global_json");                                               \
-            fflush(stdout);                                                                                           \
+            if (!__section_json_global_##name->empty())                                                               \
+            {                                                                                                         \
+                printf(CCUTILS_FMT_GLOBAL_JSON_START, "ccutils_global_json");                                         \
+                printf("%s\n", CCUTILS_JSON_DUMP(*__section_json_global_##name).c_str());                             \
+                printf(CCUTILS_FMT_GLOBAL_JSON_END, "ccutils_global_json");                                           \
+                fflush(stdout);                                                                                       \
+            }                                                                                                         \
             delete __section_json_global_##name;                                                                      \
             __section_json_global_##name = nullptr;                                                                   \
         }                                                                                                             \

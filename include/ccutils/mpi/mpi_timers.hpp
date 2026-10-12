@@ -67,10 +67,7 @@ class TimerStats {
     int rank = 0;
     MPI_Comm_rank(comm, &rank);
     if (rank != root) return;
-    if (total_count == 0) {
-      std::printf(CCUTILS_FMT_TIMER_WARN, "MPI Timer", label);
-      return;
-    }
+    if (total_count == 0) return;
 
     const double n = static_cast<double>(total_count);
     const double average_ms = global_sum_ms / n;
@@ -79,7 +76,9 @@ class TimerStats {
                                                       global_sum_ms * global_sum_ms / n) /
                                                      (n - 1.0))
                                 : 0.0;
-    std::printf(CCUTILS_FMT_TIMER_MULTIPLE, "MPI Timer", label,
+    std::printf(CCUTILS_FMT_TIMER_MULTIPLE,
+                ccutils_timers::quote_field("MPI Timer").c_str(),
+                ccutils_timers::quote_field(label).c_str(),
                 static_cast<std::size_t>(total_count), average_ms,
                 std::sqrt(variance), global_min_ms, global_max_ms,
                 global_sum_ms);
@@ -97,26 +96,26 @@ class TimerStats {
 /*                           MPI TIMER DEF                            */
 /**********************************************************************/
 
-#define CCUTILS_MPI_TIMER_DEF(name) TimerStats name
+#define CCUTILS_MPI_TIMER_DEF(name) TimerStats name;
 
 /**********************************************************************/
 /*                          MPI TIMER OPERATIONS                      */
 /**********************************************************************/
 
 #define CCUTILS_MPI_TIMER_START(name) \
-  do { (name).start(); } while (0)
+  do { (name).start(); } while (0);
 
 #define CCUTILS_MPI_TIMER_STOP(name) \
-  do { (name).stop(); } while (0)
+  do { (name).stop(); } while (0);
 
 #define CCUTILS_MPI_TIMER_DESTROY(name) \
-  do { (name).clear(); } while (0)
+  do { (name).clear(); } while (0);
 
 #define CCUTILS_MPI_TIMER_PRINT(name, label, comm) \
-  do { (name).print_stats((label), (comm)); } while (0)
+  do { (name).print_stats((label), (comm)); } while (0);
 
 #define CCUTILS_MPI_TIMER_PRINT_ROOT(name, label, comm, root) \
-  do { (name).print_stats((label), (comm), (root)); } while (0)
+  do { (name).print_stats((label), (comm), (root)); } while (0);
 
 /**********************************************************************/
 /*                          MPI TIMER SHORTCUTS                       */
@@ -126,15 +125,15 @@ class TimerStats {
     CCUTILS_MPI_TIMER_DEF(name)      \
     CCUTILS_MPI_TIMER_START(name)
 
-#define CCUTILS_MPI_TIMER_CLOSE(name)   \
-    CCUTILS_MPI_TIMER_STOP(name)        \
-    CCUTILS_MPI_TIMER_PRINT_ROOT(name)  \
-    CCUTILS_MPI_TIMER_DESTROY(name)               
+#define CCUTILS_MPI_TIMER_CLOSE(name, label, comm) \
+    CCUTILS_MPI_TIMER_STOP(name);                  \
+    CCUTILS_MPI_TIMER_PRINT(name, label, comm);    \
+    CCUTILS_MPI_TIMER_DESTROY(name)
 
 
 // #define CCUTILS_MPI_TIMEIT(name, statement) \
 //     CCUTILS_MPI_TIMER_INIT(name) \
 //     statement; \
-//     CCUTILS_MPI_TIMER_CLOSE(name) \
+//     CCUTILS_MPI_TIMER_CLOSE(name, "label", MPI_COMM_WORLD) \
 
 #endif
