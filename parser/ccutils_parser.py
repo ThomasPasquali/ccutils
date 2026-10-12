@@ -323,6 +323,10 @@ class Document:
     def to_json(self, **kw) -> str:
         return json.dumps(self.to_dict(), **kw)
 
+    def describe_structure(self) -> dict:
+        """Describe this document's shape without returning parsed payloads."""
+        return describe_structure(self)
+
     def summary(self) -> str:
         timer_label = 'timer record' if len(self.timer_records) == 1 else 'timer records'
         warning_label = 'warning' if len(self.warnings) == 1 else 'warnings'
@@ -354,6 +358,62 @@ def _unique(d: dict, name: str) -> str:
     while f'{name}#{n}' in d:
         n += 1
     return f'{name}#{n}'
+
+
+def _parse_multiline_rank_json(output: RankOutput) -> None:
+    """Recognize pretty-printed JSON values embedded in rank output lines."""
+    lines = output.lines
+    i = 0
+    while i < len(lines):
+        first = lines[i]
+        stripped = first.text.lstrip()
+        if first.kind == 'json' or not stripped.startswith(('{', '[')):
+            i += 1
+            continue
+
+        start = i
+        expected = []
+        in_string = False
+        escaped = False
+        found_value = False
+        for end in range(start, len(lines)):
+            text = lines[end].text
+            for char in text:
+                if in_string:
+                    if escaped:
+                        escaped = False
+                    elif char == '\\':
+                        escaped = True
+                    elif char == '"':
+                        in_string = False
+                    continue
+
+                if char == '"':
+                    in_string = True
+                elif char == '{':
+                    expected.append('}')
+                elif char == '[':
+                    expected.append(']')
+                elif char in '}]':
+                    if not expected or expected.pop() != char:
+                        expected = ['!']
+                        break
+            if expected == ['!']:
+                break
+            if not expected and not in_string:
+                try:
+                    value = json.loads('\n'.join(line.text for line in lines[start:end + 1]))
+                except (ValueError, RecursionError):
+                    break
+                first.kind, first.data = 'json', value
+                for body_line in lines[start + 1:end + 1]:
+                    body_line.kind, body_line.data = 'json_body', None
+                i = end + 1
+                found_value = True
+                break
+
+        if not found_value:
+            i = start + 1
 
 
 class MPIOutputParser:
@@ -551,6 +611,19 @@ class MPIOutputParser:
         for s in reversed(stack):
             s.end_line = last
             fail(SectionFormatError, f"Section '{s.name}' (line {s.start_line}) is not closed yet (still running?)")
+
+        def parse_section_rank_json(section: Section) -> None:
+            for block in section.mpi_all_prints.values():
+                for output in block.ranks.values():
+                    _parse_multiline_rank_json(output)
+            for child in section.children:
+                parse_section_rank_json(child)
+
+        for block in doc.mpi_all_prints.values():
+            for output in block.ranks.values():
+                _parse_multiline_rank_json(output)
+        for section in doc.sections.values():
+            parse_section_rank_json(section)
         return doc
 
 
@@ -561,6 +634,330 @@ def parse(text: str, **kw) -> Document:
 
 def parse_file(path: Union[str, Path], **kw) -> Document:
     return MPIOutputParser(**kw).parse_document_file(path)
+
+
+def describe_structure(document: Document) -> dict:
+    """Return structural metadata for a parsed document, excluding its data.
+
+    The description includes section nesting and titles, JSON block names,
+    JSON field names and value types, MPI print/rank layout, timer record
+    types, and structural counts. It omits free-form text and all values.
+    """
+    def describe_json(value: Any) -> Optional[dict]:
+        if isinstance(value, dict):
+            fields = {key: shape for key, child in value.items()
+                      if (shape := describe_json(child)) is not None}
+            return {'type': 'object', 'fields': fields} if fields else None
+        if isinstance(value, list):
+            item_shapes = []
+            seen = set()
+            for child in value:
+                shape = describe_json(child)
+                if shape is None:
+                    continue
+                signature = json.dumps(shape, sort_keys=True)
+                if signature not in seen:
+                    seen.add(signature)
+                    item_shapes.append(shape)
+            return {'type': 'array', 'items': item_shapes} if item_shapes else None
+        if value is None:
+            kind = 'null'
+        elif isinstance(value, bool):
+            kind = 'boolean'
+        elif isinstance(value, int):
+            kind = 'integer'
+        elif isinstance(value, float):
+            kind = 'number'
+        elif isinstance(value, str):
+            kind = 'string'
+        else:
+            kind = type(value).__name__
+        return {'type': kind}
+
+    def describe_mpi(block: MPIAllPrint) -> Optional[dict]:
+        rank_schemas = {}
+        rank_descriptions = {}
+        for rank, output in sorted(block.ranks.items()):
+            schemas = [shape for value in output.json()
+                       if (shape := describe_json(value)) is not None]
+            text_line_count = sum(
+                1 for line in output.lines
+                if line.kind == 'text' and line.text.strip()
+            )
+            if not schemas and not text_line_count:
+                continue
+            rank_schemas[rank] = schemas
+            rank_info = {'complete': output.complete}
+            if schemas:
+                rank_info['json_value_count'] = len(schemas)
+            if text_line_count:
+                rank_info['text_line_count'] = text_line_count
+            rank_descriptions[rank] = rank_info
+
+        if not rank_descriptions:
+            return None
+
+        schema_sets = [schemas for schemas in rank_schemas.values() if schemas]
+        signatures = {json.dumps(schemas, sort_keys=True) for schemas in schema_sets}
+        shared_structure = (schema_sets[0]
+                            if schema_sets and len(schema_sets) == len(rank_descriptions)
+                            and len(signatures) == 1 else None)
+        if shared_structure is None:
+            for rank, schemas in rank_schemas.items():
+                if schemas:
+                    rank_descriptions[rank]['json_structure'] = schemas
+
+        description = {'ranks': rank_descriptions, 'complete': block.complete}
+        if shared_structure is not None:
+            description['json_structure'] = shared_structure
+        return description
+
+    def describe_section(section: Section) -> dict:
+        json_blocks = {
+            name: shape for name, value in section.json_blocks.items()
+            if (shape := describe_json(value)) is not None
+        }
+        mpi_blocks = {
+            name: shape for name, block in section.mpi_all_prints.items()
+            if (shape := describe_mpi(block)) is not None
+        }
+        children = [describe_section(child) for child in section.children]
+        children = [child for child in children if child]
+        text_line_count = sum(
+            1 for line in section.lines
+            if line.kind == 'text' and line.text.strip()
+        )
+        if not (json_blocks or mpi_blocks or children or text_line_count):
+            return {}
+
+        description = {
+            'name': section.name,
+            'complete': section.complete,
+        }
+        if section.title:
+            description['title'] = section.title
+        if text_line_count:
+            description['text_line_count'] = text_line_count
+        if json_blocks:
+            description['json_blocks'] = json_blocks
+        if mpi_blocks:
+            description['mpi_all_prints'] = mpi_blocks
+        if children:
+            description['children'] = children
+        return description
+
+    timer_types: Dict[str, int] = {}
+    for record in document.timer_records:
+        timer_types[record.record_type] = timer_types.get(record.record_type, 0) + 1
+
+    sections = [describe_section(section) for section in document.sections.values()]
+    sections = [section for section in sections if section]
+    json_blocks = {
+        name: shape for name, value in document.json_blocks.items()
+        if (shape := describe_json(value)) is not None
+    }
+    mpi_blocks = {
+        name: shape for name, block in document.mpi_all_prints.items()
+        if (shape := describe_mpi(block)) is not None
+    }
+    outside_line_count = sum(1 for line in document.outside if line.text.strip())
+
+    description = {}
+    if sections:
+        description['sections'] = sections
+    if json_blocks:
+        description['json_blocks'] = json_blocks
+    if mpi_blocks:
+        description['mpi_all_prints'] = mpi_blocks
+    if document.timer_records:
+        description['timer_records'] = {'count': len(document.timer_records), 'types': timer_types}
+    if outside_line_count:
+        description['outside_line_count'] = outside_line_count
+    if document.warnings:
+        description['warning_count'] = len(document.warnings)
+    return description
+
+
+def pretty_print_structure(document: Document, file=None, width: int = 100,
+                           verbosity: int = 1) -> None:
+    """Print verbosity 0 (overview), 1 (fields), or 2 (metadata and locations)."""
+    if verbosity not in (0, 1, 2):
+        raise ValueError('verbosity must be 0, 1, or 2')
+    description = describe_structure(document)
+    if not description:
+        return
+
+    if verbosity == 0:
+        def overview_section(section: dict) -> dict:
+            result = {'name': section['name']}
+            if section.get('title'):
+                result['title'] = section['title']
+            if section.get('json_blocks'):
+                result['json_blocks'] = list(section['json_blocks'])
+            if section.get('mpi_all_prints'):
+                result['mpi_all_prints'] = {
+                    name: list(block['ranks'])
+                    for name, block in section['mpi_all_prints'].items()
+                }
+            if section.get('children'):
+                result['children'] = [overview_section(child) for child in section['children']]
+            return result
+
+        overview = {}
+        if description.get('sections'):
+            overview['sections'] = [overview_section(section) for section in description['sections']]
+        if description.get('json_blocks'):
+            overview['json_blocks'] = list(description['json_blocks'])
+        if description.get('mpi_all_prints'):
+            overview['mpi_all_prints'] = {
+                name: list(block['ranks'])
+                for name, block in description['mpi_all_prints'].items()
+            }
+        if description.get('timer_records'):
+            overview['timer_record_types'] = list(description['timer_records']['types'])
+        description = overview
+        if not description:
+            return
+    else:
+        def concise_mpi(block: dict) -> dict:
+            ranks = block.get('ranks', {})
+            result = {'ranks': list(ranks)}
+            if block.get('json_structure'):
+                result['json_structure'] = block['json_structure']
+            else:
+                per_rank = {
+                    rank: info['json_structure']
+                    for rank, info in ranks.items()
+                    if info.get('json_structure')
+                }
+                if per_rank:
+                    result['json_structures_by_rank'] = per_rank
+            return result
+
+        def concise_section(section: dict) -> dict:
+            result = {'name': section['name']}
+            if section.get('title'):
+                result['title'] = section['title']
+            if section.get('json_blocks'):
+                result['json_blocks'] = section['json_blocks']
+            if section.get('mpi_all_prints'):
+                result['mpi_all_prints'] = {
+                    name: concise_mpi(block)
+                    for name, block in section['mpi_all_prints'].items()
+                }
+            if section.get('children'):
+                result['children'] = [concise_section(child) for child in section['children']]
+            return result
+
+        concise = {}
+        if description.get('sections'):
+            concise['sections'] = [concise_section(section) for section in description['sections']]
+        if description.get('json_blocks'):
+            concise['json_blocks'] = description['json_blocks']
+        if description.get('mpi_all_prints'):
+            concise['mpi_all_prints'] = {
+                name: concise_mpi(block)
+                for name, block in description['mpi_all_prints'].items()
+            }
+        if description.get('timer_records'):
+            concise['timer_record_types'] = list(description['timer_records']['types'])
+        description = concise
+
+    if verbosity == 2:
+        section_locations = []
+        mpi_locations = []
+
+        def json_has_structure(value: Any) -> bool:
+            if isinstance(value, dict):
+                return any(json_has_structure(child) for child in value.values())
+            if isinstance(value, list):
+                return any(json_has_structure(child) for child in value)
+            return True
+
+        def rank_has_structure(output: RankOutput) -> bool:
+            return (
+                any(line.kind == 'text' and line.text.strip() for line in output.lines)
+                or any(line.kind == 'json' and json_has_structure(line.data)
+                       for line in output.lines)
+            )
+
+        def has_mpi_structure(block: MPIAllPrint) -> bool:
+            return any(rank_has_structure(output) for output in block.ranks.values())
+
+        def add_section_locations(section: Section) -> None:
+            if section.path in visible_section_paths:
+                section_locations.append({
+                    'path': section.path,
+                    'lines': [section.start_line, section.end_line],
+                })
+            for name, block in section.mpi_all_prints.items():
+                if has_mpi_structure(block):
+                    mpi_locations.append({
+                        'section': section.path,
+                        'name': name,
+                        'lines': [block.start_line, block.end_line],
+                        'rank_lines': {
+                            rank: [output.start_line, output.end_line]
+                            for rank, output in sorted(block.ranks.items())
+                            if rank_has_structure(output)
+                        },
+                    })
+            for child in section.children:
+                add_section_locations(child)
+
+        visible_section_paths = set()
+        def collect_visible_paths(sections: list, parent_path: str = '') -> None:
+            for section in sections:
+                path = f"{parent_path}/{section['name']}" if parent_path else section['name']
+                visible_section_paths.add(path)
+                collect_visible_paths(section.get('children', []), path)
+
+        collect_visible_paths(description.get('sections', []))
+        # Match by section path; duplicate paths are retained as distinct entries.
+        for section in document.sections.values():
+            add_section_locations(section)
+        for name, block in document.mpi_all_prints.items():
+            if has_mpi_structure(block):
+                mpi_locations.append({
+                    'section': None,
+                    'name': name,
+                    'lines': [block.start_line, block.end_line],
+                    'rank_lines': {
+                        rank: [output.start_line, output.end_line]
+                        for rank, output in sorted(block.ranks.items())
+                        if rank_has_structure(output)
+                    },
+                })
+        source_locations = {}
+        if section_locations:
+            source_locations['sections'] = section_locations
+        if mpi_locations:
+            source_locations['mpi_all_prints'] = mpi_locations
+        timer_lines = [record.line for record in document.timer_records if record.line]
+        if timer_lines:
+            source_locations['timer_records'] = timer_lines
+        if source_locations:
+            description['source_locations'] = source_locations
+
+    def render(value: Any, depth: int = 0) -> str:
+        compact = json.dumps(value, ensure_ascii=False, separators=(',', ': '))
+        if depth * 2 + len(compact) <= width:
+            return compact
+
+        indent = ' ' * (depth * 2)
+        child_indent = ' ' * ((depth + 1) * 2)
+        if isinstance(value, dict):
+            entries = [
+                child_indent + json.dumps(key, ensure_ascii=False) + ': ' + render(child, depth + 1)
+                for key, child in value.items()
+            ]
+            return '{\n' + ',\n'.join(entries) + '\n' + indent + '}'
+        if isinstance(value, list):
+            entries = [child_indent + render(child, depth + 1) for child in value]
+            return '[\n' + ',\n'.join(entries) + '\n' + indent + ']'
+        return compact
+
+    print(render(description), file=file)
 
 
 def parse_ccutils_file(path: Union[str, Path], **kw) -> Document:

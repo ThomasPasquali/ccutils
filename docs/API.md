@@ -75,7 +75,7 @@ Summary fields have fixed names and units. Labels are JSON-quoted strings, so qu
 - `colors.h`: ANSI escape string constants (`RED`, `BRIGHT_CYAN`, `RESET`, and background variants).
 - `formats.h`: output format string constants used by CCUTILS.
 - `easyargs.hpp`: standalone EasyArgs command-line parser API; see its header comments and [upstream guide](https://github.com/gouwsxander/easy-args).
-- `ccutils_parser.py`: installed Python module; import `parse_file` or `parse` for a complete `Document` (sections, JSON, MPI output, and timer records), or `parse_timer_records` to extract just timer lines. Compatibility helpers `parse_ccutils_output` and `parse_ccutils_output_file` return the section mapping.
+- `ccutils_parser.py`: installed Python module; import `parse_file` or `parse` for a complete `Document` (sections, JSON, MPI output, and timer records), `describe_structure(document)` for JSON field names and types without payload values, `pretty_print_structure(document, verbosity=...)` to print compact width-aware JSON, or `parse_timer_records` to extract just timer lines. Verbosity `0` shows sections and block names, `1` (default) includes JSON fields and types with concise MPI rank summaries, and `2` adds structural counts, completion flags, and source line ranges. Identical MPI JSON structures are shown once per MPI print block. Compatibility helpers `parse_ccutils_output` and `parse_ccutils_output_file` return the section mapping.
 
 ## Optional modules
 
