@@ -16,8 +16,12 @@ CCUTILS is a header-only collection of small C++ utilities: structured output, t
 To automatically download and install the library in `$HOME/.local`, run:
 
 ```bash
-# If needed, change the branch name
+# Install the default main branch
 wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash
+
+# Or select a branch or release tag
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash -s -- --branch specific_branch
+wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash -s -- --tag v1.0.0
 ```
 
 > [!IMPORTANT]
@@ -33,7 +37,7 @@ cmake --build build
 cmake --install build
 ```
 
-The interactive installer can also use an existing local checkout: `./install.sh --repo /path/to/ccutils`.
+The interactive installer can also use an existing local checkout: `./install.sh --repo /path/to/ccutils`. For the managed upstream clone, choose a branch or release tag with `./install.sh --branch feature/name` or `./install.sh --tag v1.0.0` (default branch: `main`).
 
 Enable optional modules with `-DCCUTILS_ENABLE_MPI=ON` or `-DCCUTILS_ENABLE_CUDA=ON`. See [installation and integration](docs/INSTALL.md) for Make, CMake, and FetchContent examples.
 

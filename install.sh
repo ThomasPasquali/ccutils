@@ -12,15 +12,19 @@ INSTALL_BIN="$INSTALL_PREFIX/bin"
 
 REPO_URL="https://github.com/ThomasPasquali/ccutils.git"
 REPO_BRANCH="main"
+REPO_TAG=""
+BRANCH_SPECIFIED=0
+TAG_SPECIFIED=0
 SOURCE_DIR=""
 
 usage() {
     cat <<'USAGE'
-Usage: install.sh [--repo PATH]
+Usage: install.sh [--branch NAME | --tag NAME] [--repo PATH]
 
 Install from the default CCUTILS repository, or pass the path to an existing
 local CCUTILS clone with --repo. A supplied clone is used as-is and is not
-pulled or otherwise updated.
+pulled or otherwise updated. --branch and --tag select a remote ref and cannot
+be combined with --repo or with each other. The default branch is main.
 USAGE
 }
 
@@ -35,6 +39,36 @@ while (($#)); do
             SOURCE_DIR="$2"
             shift 2
             ;;
+        --branch)
+            if (($# < 2)) || [[ -z "$2" ]]; then
+                echo "Error: --branch requires a branch name." >&2
+                usage >&2
+                exit 2
+            fi
+            if ((TAG_SPECIFIED)); then
+                echo "Error: --branch and --tag cannot be used together." >&2
+                usage >&2
+                exit 2
+            fi
+            REPO_BRANCH="$2"
+            BRANCH_SPECIFIED=1
+            shift 2
+            ;;
+        --tag)
+            if (($# < 2)) || [[ -z "$2" ]]; then
+                echo "Error: --tag requires a tag name." >&2
+                usage >&2
+                exit 2
+            fi
+            if ((BRANCH_SPECIFIED)); then
+                echo "Error: --branch and --tag cannot be used together." >&2
+                usage >&2
+                exit 2
+            fi
+            REPO_TAG="$2"
+            TAG_SPECIFIED=1
+            shift 2
+            ;;
         --help|-h)
             usage
             exit 0
@@ -46,6 +80,12 @@ while (($#)); do
             ;;
     esac
 done
+
+if [[ -n "$SOURCE_DIR" && ( $BRANCH_SPECIFIED -eq 1 || $TAG_SPECIFIED -eq 1 ) ]]; then
+    echo "Error: --branch and --tag apply only to the default upstream clone, not --repo." >&2
+    usage >&2
+    exit 2
+fi
 
 if [[ -n "$SOURCE_DIR" ]]; then
     if [[ ! -d "$SOURCE_DIR" ]]; then
@@ -140,6 +180,10 @@ ensure_line_present() {
 echo "--------- ccutils Installation Options ---------"
 if [[ -n "$SOURCE_DIR" ]]; then
     echo "Source clone: $SOURCE_DIR"
+elif [[ -n "$REPO_TAG" ]]; then
+    echo "Source tag: $REPO_TAG"
+else
+    echo "Source branch: $REPO_BRANCH"
 fi
 ENABLE_CUDA=OFF
 ENABLE_MPI=OFF
@@ -173,11 +217,29 @@ else
     echo -e "${GREEN}[1] Creating installation directory at $PKG_DIR ...${RESET}"
     mkdir -p "$PKG_DIR"
     echo -e "${GREEN}[2] Cloning or updating repository...${RESET}"
+    INSTALL_REF="$REPO_BRANCH"
+    if [[ -n "$REPO_TAG" ]]; then
+        INSTALL_REF="$REPO_TAG"
+    fi
     if [ ! -d "$PKG_DIR/.git" ]; then
-        git clone -b "$REPO_BRANCH" "$REPO_URL" "$PKG_DIR"
+        git clone --branch "$INSTALL_REF" --single-branch "$REPO_URL" "$PKG_DIR"
+    elif [[ -n "$REPO_TAG" ]]; then
+        git -C "$PKG_DIR" fetch --tags origin
+        if ! git -C "$PKG_DIR" rev-parse --verify --quiet "refs/tags/$REPO_TAG^{commit}" >/dev/null; then
+            echo "Error: tag '$REPO_TAG' was not found in $REPO_URL." >&2
+            exit 2
+        fi
+        git -C "$PKG_DIR" checkout --detach "refs/tags/$REPO_TAG"
     else
-        echo "Repository already exists. Pulling latest changes..."
-        git -C "$PKG_DIR" pull --rebase
+        echo "Repository already exists. Updating branch '$REPO_BRANCH'..."
+        git -C "$PKG_DIR" fetch origin \
+            "+refs/heads/$REPO_BRANCH:refs/remotes/origin/$REPO_BRANCH"
+        if git -C "$PKG_DIR" show-ref --verify --quiet "refs/heads/$REPO_BRANCH"; then
+            git -C "$PKG_DIR" checkout "$REPO_BRANCH"
+            git -C "$PKG_DIR" pull --rebase origin "$REPO_BRANCH"
+        else
+            git -C "$PKG_DIR" checkout --track -b "$REPO_BRANCH" "origin/$REPO_BRANCH"
+        fi
     fi
     BUILD_SOURCE_DIR="$PKG_DIR"
 fi
@@ -222,7 +284,7 @@ ensure_line_present "$RC_FILE" \
 # the next upgrade to a different source.
 if [[ -z "$SOURCE_DIR" ]]; then
     cd "$INSTALL_BIN"
-    wget "https://raw.githubusercontent.com/ThomasPasquali/ccutils/${REPO_BRANCH}/install.sh"
+    wget "https://raw.githubusercontent.com/ThomasPasquali/ccutils/${INSTALL_REF}/install.sh"
     mv install.sh ccutils-upgrade
     chmod +x ccutils-upgrade
 fi

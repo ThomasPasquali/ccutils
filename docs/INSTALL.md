@@ -18,6 +18,15 @@ To use the interactive installer with a local clone or fork, pass its checkout r
 
 The installer builds that checkout as-is and does not pull it. In local-clone mode it does not install the upstream `ccutils-upgrade` command; rerun `install.sh --repo /path/to/ccutils` after updating the clone.
 
+To install a particular upstream branch or release tag, use `--branch` or `--tag` (the default branch is `main`):
+
+```sh
+./install.sh --branch feature/my-change
+./install.sh --tag v1.0.0
+```
+
+These options are mutually exclusive and apply to the managed upstream clone. They cannot be combined with `--repo`.
+
 ```sh
 cmake -S . -B build \
   -DCMAKE_INSTALL_PREFIX="$HOME/.local" \
