@@ -4,6 +4,7 @@
 *build/
 *install/
 *lib/
+**__pycache__
 
 # Examples
 examples/cpu/cpu_timers

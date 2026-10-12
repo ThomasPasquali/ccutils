@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+if(@CCUTILS_ENABLE_MPI@)
+  find_dependency(MPI REQUIRED COMPONENTS CXX)
+endif()
+if(@CCUTILS_ENABLE_CUDA@)
+  find_dependency(CUDAToolkit REQUIRED)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/ccutilsTargets.cmake")
+check_required_components(ccutils)
