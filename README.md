@@ -10,6 +10,7 @@ CCUTILS is a header-only collection of small C++ utilities: structured output, t
 - ANSI color constants, assertions, and math helpers.
 - The bundled single-header `easyargs` argument parser.
 - Importable Python parser for sections, JSON, MPI blocks, and timer records (`import ccutils_parser` after CMake installation).
+- Output visualization CLI (`ccutils-visualize` after installation).
 
 ## Fast Install
 

@@ -30,4 +30,7 @@ The installed module also provides a small command-line interface:
 ```sh
 python -m ccutils_parser run.log
 python -m ccutils_parser run.log --json
+
+# Visualize the logs in your browser
+ccutils-visualize run.log
 ```

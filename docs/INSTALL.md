@@ -38,6 +38,8 @@ Enabling a module requires a usable MPI C++ implementation or CUDA toolkit. The 
 
 The Python output parser (Python 3.8 or newer) is installed as `ccutils_parser.py` into the selected interpreter's site-packages directory. It can then be imported with `import ccutils_parser`. If you choose a custom install prefix outside Python's active search paths, add the corresponding `lib/pythonX.Y/site-packages` directory under that prefix to `PYTHONPATH`.
 
+The installer also places the visualization CLI in the installer's `bin` directory. Run it as `ccutils-visualize my_output.log`.
+
 ## CMake consumer
 
 ```cmake
