@@ -7,8 +7,35 @@ CCUTILS_MACHINE_OUT=file:run.jsonl ./app        # human output on stdout, record
 CCUTILS_MACHINE_OUT=inline ./app > run.out      # one stream; records are lines starting with "@ccutils "
 ```
 
-The human output is not affected by enabling the machine stream. `CCUTILS_FORMAT=v2`
-selects the path-based human renderer; `legacy` remains the default.
+The human output is not affected by enabling the machine stream. The 1.0 default is
+`CCUTILS_FORMAT=v2`, which selects the path-based human renderer. Set
+`CCUTILS_FORMAT=legacy` to retain the legacy renderer, or define
+`CCUTILS_FORMAT_LEGACY` when compiling to make legacy the default for that build.
+
+## Human v2 output
+
+Section starts and ends use full paths. Values are printed as one JSON value per line,
+and timer reports use a table in milliseconds. Gathered MPI text has a rank prefix on each
+line. For example:
+
+```text
+== solve :: Solve phase ==
+residual = 1.5e-09
+timers [ms]  (rank 0)
+  name   n     avg     sd     min     max     sum
+  kernel   5  0.004  0.000  0.004  0.004  0.019
+
+-- all-ranks: status --
+[r0] ready
+[r1] ready
+-- end all-ranks: status --
+== end solve ==
+```
+
+The corresponding structural lines are `== <path> :: <title> ==` and
+`== end <path> ==`. The `[rN] ` prefix is applied per line of gathered text; applications
+that need byte-exact text should use the machine stream, which carries text encoding and
+trailing-newline metadata.
 
 ## Records
 
@@ -49,7 +76,7 @@ If an outer section ends while inner sections remain open, each inner section ge
 Example (a non-MPI run):
 
 ```jsonl
-{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","host":"node","seq":1}
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"v2","host":"node","seq":1}
 {"v":2,"type":"section_start","section":"solve","scope":"global","rank":null,"title":"Solve phase","seq":2}
 {"v":2,"type":"timer","section":"solve","scope":"rank","rank":null,"name":"kernel","group":"Timer","unit":"ms","clock":"steady","n":5,"avg":0.0038146,"sd":1e-05,"min":0.003807,"max":0.003832,"sum":0.019073,"seq":3}
 {"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"residual","value":1.5e-09,"seq":4}
@@ -63,7 +90,8 @@ communicator is written by that communicator's root: into the main file if the r
 is world rank 0, otherwise into the sidecar `<path>.r<rank>` (see OUTPUT.md). Every
 file has its own `seq` counter starting at 1.
 
-## Remaining machine-stream work
+## Deferred machine-stream feature
 
-The current records include buffered all-print text and MPI timer rank details. Batched
-MPI timer reporting at section end remains deferred; see [TODO.md](TODO.md).
+Optional batched MPI timer reporting at section end is deferred. Current MPI timer reports
+are emitted individually; all records needed to interpret those reports, including
+per-rank distributions and optional raw samples, are available in this schema.

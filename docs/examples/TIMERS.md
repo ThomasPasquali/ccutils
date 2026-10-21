@@ -1,33 +1,40 @@
 # Timers
 
-Timer definitions retain all samples until the timer's vector goes out of scope. CPU and CUDA times are milliseconds. See [core timer API](../API.md#cpu-timers) for statistic fields and printing variants.
+The `timers` example records repeated CPU work, excludes warm-up samples, prints individual
+samples, and combines timer results. CPU and CUDA elapsed times are reported in
+milliseconds. Timer print calls produce no output until a timer has samples.
 
-Timer print macros emit `CCUTILS_TIMER v=1` key/value records with colors controlled by `CCUTILS_COLOR_LEVEL`. They can be mixed with normal application output and parsed by the CCUTILS Python parser, which removes ANSI color codes before reading records.
+Build the examples against an installed CCUTILS package:
 
-Print calls emit nothing until the timer has at least one sample. The same applies to MPI timer summaries and to aggregate print macros when every input timer is empty.
-
-From the `examples` directory:
-
-```bash
-# Install CCUTILS on the system
-# If needed, change the branch name
-wget -qO- https://raw.githubusercontent.com/ThomasPasquali/ccutils/main/install.sh | env bash
-
-# Using CMake
-cmake -B build
-# If you want to include CUDA and MPI:
-cmake -B build -DWITH_CUDA=ON -DWITH_MPI=ON
-cmake --build build -t timers
-
-# OR Using Makefile
-make timers
-# If you want to include CUDA and MPI:
-make WITH_MPI=1 WITH_CUDA=1 timers
-mkdir -p build
-mv timers build
-
-# Run (normal)
-./build/timers
-# Run (MPI)
-mpirun -np 2 ./build/timers
+```sh
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+cmake --build build
+cmake --install build
+cmake -S examples -B build/examples -DCMAKE_PREFIX_PATH="$HOME/.local"
+cmake --build build/examples --target timers
+./build/examples/timers
 ```
+
+With MPI enabled in the CCUTILS install and examples configuration:
+
+```sh
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DCCUTILS_ENABLE_MPI=ON
+cmake --build build
+cmake --install build
+cmake -S examples -B build/examples -DCMAKE_PREFIX_PATH="$HOME/.local" -DWITH_MPI=ON
+cmake --build build/examples --target timers
+mpirun -n 2 ./build/examples/timers
+```
+
+The v2 human renderer is the default and displays timer summaries in tables. Set
+`CCUTILS_FORMAT=legacy` to use the previous `CCUTILS_TIMER` key/value text. For analysis,
+write the separate JSON Lines stream and load it with `ccutils`:
+
+```sh
+CCUTILS_MACHINE_OUT=file:timers.jsonl ./build/examples/timers
+ccutils timers timers.jsonl --csv > timers.csv
+```
+
+`CCUTILS_COLOR=auto` is the default, so color is used only for terminal sinks. Set
+`CCUTILS_COLOR=never` for plain output. See the [core timer API](../API.md#cpu-timers),
+[output settings](../OUTPUT.md), and [parser guide](PARSER.md).

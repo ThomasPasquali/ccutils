@@ -332,7 +332,11 @@ inline MpiTimer& mpi_timer(const std::string& name) {
 
 // Historical global name, kept so existing code compiles. It is unrelated to
 // ccutils_timers::TimerStats (timers.hpp); the macros below use ccutils::MpiTimer.
-using TimerStats = ccutils::MpiTimer;
+#if defined(__GNUC__) || defined(__clang__)
+typedef ccutils::MpiTimer TimerStats __attribute__((deprecated("use ccutils::MpiTimer; the global TimerStats alias will be removed in a future major release")));
+#else
+typedef ccutils::MpiTimer TimerStats;
+#endif
 
 
 /**********************************************************************/

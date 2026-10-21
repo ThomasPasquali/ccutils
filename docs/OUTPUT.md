@@ -8,16 +8,16 @@ By default that sink is `stdout`, and the bytes are identical to previous versio
 |----------|--------|---------|
 | `CCUTILS_HUMAN_OUT` | `stdout`, `stderr`, `none`, `file:<path>`, `append:<path>` | `stdout` |
 | `CCUTILS_MACHINE_OUT` | `none`, `stdout`, `stderr`, `inline`, `file:<path>`, `append:<path>` | `none` |
-| `CCUTILS_FORMAT` | `legacy`, `v2` | `legacy` |
-| `CCUTILS_COLOR` | `auto`, `always`, `never` | `always` |
+| `CCUTILS_FORMAT` | `legacy`, `v2` | `v2` |
+| `CCUTILS_COLOR` | `auto`, `always`, `never` | `auto` |
 | `CCUTILS_FLUSH_WAIT_US` | non-negative integer microseconds | `200000` |
 
 `CCUTILS_FLUSH_WAIT_US` sets the delay after each `CCUTILS_MPI_PRINT_ONCE` call; set it to
 `0` to disable the delay. Invalid or out-of-range values use the default.
 
 `CCUTILS_COLOR=auto` enables ANSI colors only when the sink is a terminal. `NO_COLOR` set to
-a non-empty value disables colors regardless of `CCUTILS_COLOR`; `always` is the default to
-preserve legacy output. Invalid `CCUTILS_COLOR` values use `always`. `-DCCUTILS_COLOR_LEVEL`
+a non-empty value disables colors regardless of `CCUTILS_COLOR`. Invalid `CCUTILS_COLOR`
+values use `auto`. `-DCCUTILS_COLOR_LEVEL`
 continues to select the palette at compile time.
 
 `file:` truncates, `append:` appends. Path templates: `%r` rank, `%p` pid,
@@ -59,7 +59,7 @@ before they run, from the launcher environment (`OMPI_COMM_WORLD_RANK`, `PMI_RAN
 * `CCUTILS_MPI_PROCESS_PRINT` routes its banner lines through the human sink, but text
   written by the block to `stdout` is not redirected.
 * `auto` color mode uses terminal detection for each sink; files and pipes have colors removed.
-* `CCUTILS_FORMAT=v2` enables path-based section banners, JSON key/value lines,
-  timer tables and `[rN]` all-print text. `legacy` remains the default and preserves
-  the existing output bytes.
-* The human-v2 parser and complete MPI timer rank-distribution table are still in progress.
+* `CCUTILS_FORMAT=v2` is the default and enables path-based section banners, JSON key/value
+  lines, timer tables and `[rN]` all-print text. `CCUTILS_FORMAT=legacy` preserves the
+  existing output bytes. Define `CCUTILS_FORMAT_LEGACY` at compile time to select legacy
+  as the build default.

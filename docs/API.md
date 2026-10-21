@@ -62,13 +62,19 @@ Elapsed time is milliseconds from `std::chrono::steady_clock`. `CCUTILS_TIMER_VA
 
 Timer print macros produce no output when their timer has no samples; aggregate print macros produce no output when all input timers are empty.
 
-Timer output uses versioned key/value lines prefixed by `CCUTILS_TIMER`. For example, with colors disabled:
+The default v2 human output displays timers as tables in milliseconds. Set
+`CCUTILS_FORMAT=legacy` to emit the previous versioned key/value lines prefixed by
+`CCUTILS_TIMER`. For example, with legacy format and colors disabled:
 
 ```text
 CCUTILS_TIMER v=1 type=summary group="Timer" name="work" n=3 avg_ms=1.250000 stddev_ms=0.100000 min_ms=1.150000 max_ms=1.350000 sum_ms=3.750000
 ```
 
-Summary fields have fixed names and units. Labels are JSON-quoted strings, so quotes, spaces, and line breaks do not break record boundaries. With colors enabled, timer and section markers are ANSI-colored; the CCUTILS parser strips those codes before parsing. Other output (including ordinary `printf`) can be freely interleaved; consumers can select timer records by their prefix. Record types are `summary`, `sample`, `run`, and `aggregate`. Print macros emit no record when the timer has no samples. Run indices start at zero. The `v=1` field identifies this record layout.
+Other output (including ordinary `printf`) can be freely interleaved. Legacy record types
+are `summary`, `sample`, `run`, and `aggregate`. Print macros emit no output when the timer
+has no samples. Run indices start at zero. The `v=1` field identifies this legacy record
+layout. For structured records independent of the human format, enable
+`CCUTILS_MACHINE_OUT`; see [FORMAT.md](FORMAT.md).
 
 ## RAII sections
 
@@ -93,7 +99,9 @@ must be gathered and printed.
 - `colors.h`: ANSI escape string constants (`RED`, `BRIGHT_CYAN`, `RESET`, and background variants).
 - `formats.h`: output format string constants used by CCUTILS.
 - `easyargs.hpp`: standalone EasyArgs command-line parser API; see its header comments and [upstream guide](https://github.com/gouwsxander/easy-args).
-- `ccutils_parser.py`: installed Python module; import `parse_file` or `parse` for a complete `Document` (sections, JSON, MPI output, and timer records), `describe_structure(document)` for JSON field names and types without payload values, `pretty_print_structure(document, verbosity=...)` to print compact width-aware JSON, or `parse_timer_records` to extract just timer lines. Verbosity `0` shows sections and block names, `1` (default) includes JSON fields and types with concise MPI rank summaries, and `2` adds structural counts, completion flags, and source line ranges. Identical MPI JSON structures are shown once per MPI print block. Compatibility helpers `parse_ccutils_output` and `parse_ccutils_output_file` return the section mapping.
+- Python: import `ccutils` and use `ccutils.load()` for a `Run` model across JSONL, inline,
+  human-v2, and legacy logs. See [PARSER_V2.md](PARSER_V2.md). The older `Document` parser
+  API remains available from `ccutils.ccutils_parser` for compatibility.
 
 ## Optional modules
 

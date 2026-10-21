@@ -17,3 +17,8 @@ void launch_work(cudaStream_t stream) {
 ```
 
 `CCUTILS_CUDA_CHECK(call)` reports CUDA runtime failures and exits. `CCUTILS_CUDA_FREE_SAFE(ptr)` frees a non-null pointer. `cuda_utils.hpp` provides `h2d_copy`, `d2h_copy`, and `d2d_copy` helpers; returned allocations are owned by the caller. CUDA timers use events and synchronize at stop to obtain elapsed milliseconds.
+
+`CCUTILS_TIMER_PRINT` uses the v2 timer table by default. Set `CCUTILS_FORMAT=legacy` to
+retain the previous timer text, or set `CCUTILS_MACHINE_OUT=file:cuda.jsonl` to write
+machine-readable timer records. CUDA support remains optional and requires a CUDA toolkit;
+see the open CUDA item in [TODO.md](../TODO.md) for its unverified build coverage.

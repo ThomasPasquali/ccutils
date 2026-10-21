@@ -11,7 +11,7 @@
  *
  *   CCUTILS_HUMAN_OUT    stdout | stderr | none | file:<path> | append:<path>
  *   CCUTILS_MACHINE_OUT  none | stdout | stderr | inline | file:<path> | append:<path>
- *   CCUTILS_FORMAT       legacy (the only format implemented so far)
+ *   CCUTILS_FORMAT       v2 | legacy (default: v2; legacy available for migration)
  *
  * Path templates: %r rank, %p pid, %j SLURM_JOB_ID (or pid), %% a percent sign.
  *
@@ -149,8 +149,12 @@ class Sink {
       color_mode_ = ColorMode::Never;
     } else if (color != nullptr && std::strcmp(color, "auto") == 0) {
       color_mode_ = ColorMode::Auto;
-    } else {
+    } else if (color != nullptr && std::strcmp(color, "always") == 0) {
       color_mode_ = ColorMode::Always;
+    } else if (color == nullptr) {
+      color_mode_ = ColorMode::Auto;
+    } else {
+      color_mode_ = ColorMode::Auto;
     }
   }
 
@@ -243,14 +247,14 @@ class Sink {
   SinkSpec spec_;
   FILE* file_ = nullptr;
   bool warned_ = false;
-  ColorMode color_mode_ = ColorMode::Always;
+  ColorMode color_mode_ = ColorMode::Auto;
 };
 
 struct State {
   std::mutex mutex;
   bool configured = false;
   int rank = -1;  // set explicitly by the MPI macros
-  std::string format = "legacy";
+  std::string format = "v2";
   Sink human;
   Sink machine;
 
@@ -295,11 +299,18 @@ inline void apply(State& s, const Config& cfg) {
   s.human.close();
   s.machine.close();
 
-  const std::string format = pick(cfg.format, "CCUTILS_FORMAT", "legacy");
+  // 1.0 defaults to v2. Define CCUTILS_FORMAT_LEGACY for source-compatible
+  // legacy output unless the runtime configuration explicitly selects a format.
+#ifdef CCUTILS_FORMAT_LEGACY
+  const char* default_format = "legacy";
+#else
+  const char* default_format = "v2";
+#endif
+  const std::string format = pick(cfg.format, "CCUTILS_FORMAT", default_format);
   if (format != "v2" && format != "legacy") {
-    warn(s, "unknown CCUTILS_FORMAT '" + format + "'; using 'legacy'");
+    warn(s, "unknown CCUTILS_FORMAT '" + format + "'; using '" + default_format + "'");
   }
-  s.format = (format == "v2") ? "v2" : "legacy";
+  s.format = (format == "v2" || format == "legacy") ? format : std::string(default_format);
 
   SinkSpec spec;
   std::string error;
@@ -369,8 +380,6 @@ inline void warn_once(const std::string& key, const std::string& message) {
   detail::warn(s, message);
 }
 
-// TODO(P6-default-v2): flip the default to v2 in 1.0 (keep CCUTILS_FORMAT=legacy and -DCCUTILS_FORMAT_LEGACY).
-//   Details: docs/TODO.md  (### P6-default-v2)
 inline const char* format_name() {
   static thread_local std::string selected;
   detail::State& s = detail::state();

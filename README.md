@@ -9,7 +9,7 @@ CCUTILS is a header-only collection of small C++ utilities: structured output, t
 - MPI rank output and MPI/CUDA error-checking helpers.
 - ANSI color constants, assertions, and math helpers.
 - The bundled single-header `easyargs` argument parser.
-- Importable Python parser for sections, JSON, MPI blocks, and timer records (`import ccutils_parser` after CMake installation).
+- Importable Python parser for JSONL, inline, human-v2 and legacy logs (`import ccutils`).
 - Output visualization CLI (`ccutils-visualize` after installation).
 
 ## Fast Install
@@ -58,11 +58,16 @@ Link `ccutils::ccutils` in CMake, or add the install `include` directory to your
 
 ## Output and parsing
 
-Section markers and JSON block markers are stable line-oriented delimiters. JSON records are valid JSON and emitted only for nonempty sections. Timer macros emit versioned key/value records only when there are samples; records can be mixed with free-form output and selected by their `CCUTILS_TIMER` prefix. Set `CCUTILS_COLOR_LEVEL` from 0 (no color) to 3 (bright foreground and background colors) to choose ANSI color intensity. See [the API guide](docs/API.md) and [parser documentation](docs/examples/PARSER.md).
+The 1.0 human output uses the v2 renderer by default. It presents path-based sections,
+structured key/value lines, timer tables and rank-prefixed MPI text. Select
+`CCUTILS_FORMAT=legacy` to keep the previous output, or define `CCUTILS_FORMAT_LEGACY` at
+compile time for builds that should default to legacy. Set `CCUTILS_MACHINE_OUT` to write
+JSON Lines records for analysis. See [output configuration](docs/OUTPUT.md),
+[the record format](docs/FORMAT.md), and the [migration guide](docs/MIGRATION.md).
 
 ## Multi-file projects
 
-Sections, timers and JSON objects are found by name, so a function in another file can update what `main()` created, without passing anything around. See [multi-file usage](docs/MULTIFILE.md). To analyse a run in Python, see the [parser guide](docs/PARSER_V2.md). The design and the list of remaining work are in [docs/DESIGN.md](docs/DESIGN.md) and [docs/TODO.md](docs/TODO.md). Output can be redirected to files or split into a human and a machine-readable stream: see [output destinations](docs/OUTPUT.md) and [the record format](docs/FORMAT.md).
+Sections, timers and JSON objects are found by name, so a function in another file can update what `main()` created, without passing anything around. See [multi-file usage](docs/MULTIFILE.md). To analyse a run in Python, see [the parser guide](docs/PARSER_V2.md). The design and remaining work are in [docs/DESIGN.md](docs/DESIGN.md) and [docs/TODO.md](docs/TODO.md). Output can be redirected to files or split into human and machine-readable streams; see [output destinations](docs/OUTPUT.md).
 
 ## Examples
 

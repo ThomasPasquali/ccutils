@@ -1,6 +1,10 @@
 # MPI utilities
 
-Configure CCUTILS with `-DCCUTILS_ENABLE_MPI=ON`, then link `ccutils::ccutils_mpi` in CMake. In Make projects use an MPI compiler wrapper and define `CCUTILS_ENABLE_MPI`.
+Configure CCUTILS with `-DCCUTILS_ENABLE_MPI=ON`, then link `ccutils::ccutils_mpi` in
+CMake. In Make projects use an MPI compiler wrapper and define `CCUTILS_ENABLE_MPI`.
+The 1.0 default human output uses path-based section markers, timer tables, and rank-prefixed
+all-print text. Set `CCUTILS_FORMAT=legacy` to retain the earlier layout. To save records
+for analysis, set `CCUTILS_MACHINE_OUT=file:run.jsonl` before launching the program.
 
 ```cpp
 #include <mpi.h>
@@ -32,6 +36,15 @@ int main(int argc, char** argv) {
 }
 ```
 
-All processes must call collective operations in the same order. The print block writes to the provided `fp`; `CCUTILS_MPI_ALL_PRINT` gathers nonempty rank buffers and writes them on rank zero. Ranks with no buffered content, and named blocks with no content on any rank, produce no markers. `CCUTILS_MPI_ONCE` and `CCUTILS_MPI_PRINTF_ONCE` require `CCUTILS_MPI_INIT` first. Timer aggregation also requires every rank in the communicator to call print together; it emits nothing if there are no samples across the communicator.
+All processes in a communicator must call collective operations in the same order. The
+all-print block writes to the provided `fp`; `CCUTILS_MPI_ALL_PRINT` gathers rank buffers
+and writes them on the communicator root. `CCUTILS_MPI_ALL_PRINT_COMM` accepts an explicit
+communicator. `CCUTILS_MPI_ONCE` and `CCUTILS_MPI_PRINTF_ONCE` require
+`CCUTILS_MPI_INIT` first. Timer reporting is collective over its communicator and must be
+called by every member; an empty timer emits no summary.
 
-MPI subsection markers are printed once, while subsection JSON is gathered and labeled by rank. `CCUTILS_MPI_JSON_PRINT` does the same for standalone rank-local JSON objects and must be called by every rank in matching order.
+MPI section markers and global values are written by rank zero. Rank-local values are
+preserved with their rank in the machine stream and shown with rank labels in human output.
+`CCUTILS_MPI_JSON_PRINT` gathers standalone rank-local JSON and must be called by every
+rank in matching order. See the [MPI macro reference](../API.md#optional-modules),
+[output settings](../OUTPUT.md), and [machine record format](../FORMAT.md).

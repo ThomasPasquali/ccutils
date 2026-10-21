@@ -81,6 +81,7 @@ ccutils data   run.jsonl --section solve --key residual
 ccutils check  run.jsonl        # exit status 1 if there are problems
 ```
 
-The older functions (`parse`, `parse_file`, `MPIOutputParser`, ...) are unchanged. The
-`parser` import and `python -m parser` command remain as deprecated aliases when that name
-is available; Python versions through 3.9 include a standard-library module named `parser`.
+The older functions (`parse`, `parse_file`, `MPIOutputParser`, ...) remain importable from
+`ccutils.ccutils_parser` as compatibility APIs. The old top-level `parser` package and
+`python -m parser` entry point are retained as deprecated aliases where that name is
+available; Python versions through 3.9 include a standard-library module named `parser`.

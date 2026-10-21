@@ -75,7 +75,7 @@ Also reviewed: `mpi/mpi_timers.hpp` (the MPI timer class, called `TimerStats` in
 |---|------------|----------------|
 | C1 | `CCUTILS_MPI_ALL_PRINT*` gathers rank-local H/M frames to the communicator root, which is the only sink writer, then synchronizes with `MPI_Barrier`. | No shared FS, no interleaving, only standard collectives; large frame sets use bounded Gatherv rounds. |
 | C2 | Existing macro names and signatures keep working, including the `fp` variable inside `PRINTS_CODE_BLOCK`. | User code must compile unchanged. |
-| C3 | Old output stays **byte-identical** under `CCUTILS_FORMAT=legacy` (the default until the new format is stable). | Old logs, scripts and the old parser keep working. |
+| C3 | Old output stays **byte-identical** under `CCUTILS_FORMAT=legacy`. | Old logs, scripts and the old parser keep working. |
 | C4 | No new collective operations inside existing macros unless opt-in. | Adding a hidden collective can deadlock a program that calls a macro from a subset of ranks. |
 | C5 | `CCUTILS_NO_JSON` and non-MPI builds keep compiling. | Library is header-only and optional-dependency based. |
 | C6 | Flush/ordering behaviour (`fflush`, `CCUTILS_FLUSH_WAIT`) is preserved by default. | These are probably there for launcher stdout ordering; do not remove blindly. |
@@ -140,7 +140,7 @@ How the MPI timer works today: each rank records local `MPI_Wtime` intervals; `p
 
 | Variable | Values | Default |
 |----------|--------|---------|
-| `CCUTILS_FORMAT` | `legacy` \| `v2` | `legacy` (switches to `v2` in a later major release) |
+| `CCUTILS_FORMAT` | `legacy` \| `v2` | `v2` in 1.0; set `legacy` to retain the prior renderer |
 | `CCUTILS_HUMAN_OUT` | `stdout` \| `stderr` \| `none` \| `file:<path>` \| `append:<path>` | `stdout` |
 | `CCUTILS_MACHINE_OUT` | same as above, or `inline` | `none` |
 | `CCUTILS_COLOR` | `auto` \| `always` \| `never` (`NO_COLOR` is honoured) | `auto` (color only if the sink is a TTY) |
@@ -731,7 +731,7 @@ python -m ccutils check  run.log                    # structural problems (unclo
 
 | Release | Default `CCUTILS_FORMAT` | Notes |
 |---------|--------------------------|-------|
-| 0.x (now) | `legacy` | v2 available via env/config. Old parser untouched. |
+| 0.x | `legacy` | v2 available via env/config. Old parser untouched. |
 | 0.y | `legacy` | v2 declared stable; parser v2 autodetects all formats. |
 | 1.0 | `v2` | `legacy` still selectable via `CCUTILS_FORMAT=legacy` / `-DCCUTILS_FORMAT_LEGACY`. |
 

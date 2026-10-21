@@ -20,11 +20,11 @@ Legend: **Design** = section of DESIGN.md. **Where** = files to change.
 | 3 Human renderer v2 | **done** for section, key/value, timer-table and rank-text output |
 | 4 MPI integration | framed H/M all-print, chunked gather, MPI timer distributions, rank policies, sample records and warm-up exclusion: **implemented**; MPI runtime matrix was not run per request. Optional section timer batching is deferred. |
 | 5 Parser v2 | model, JSONL / inline / legacy / human-v2 front ends, CLI, text chunk reassembly and MPI timer rank queries: **done** |
-| 6 Docs and switch | partly (docs exist for output, format, multi-file, parser) (P6-*) |
+| 6 Docs and switch | v2 default, migration guide, output and parser docs: **done** |
 
 ## Ground rules (learned while implementing; read before touching anything)
 
-1. **Legacy output is byte-identical until `CCUTILS_FORMAT=v2`.** The goldens in
+1. **Legacy output remains byte-identical under `CCUTILS_FORMAT=legacy`.** The goldens in
    `tests/golden/*.txt` are the gate. A changed legacy golden is a behaviour change.
    Machine-stream goldens (`*.jsonl`) may change when you add records; review the diff.
 2. **Never put a `//` comment inside a multi-line macro** (the backslash continuation
@@ -108,15 +108,6 @@ Optional deferred item: batched reporting of all MPI timers at section end, guar
 cross-rank registration consistency check. The current API reports timers individually.
 
 ## Phase 6: docs and switch
-
-### P6-default-v2
-**Design:** §7. **Where:** `include/ccutils/emitter.hpp` (`apply`), `README.md`,
-`docs/OUTPUT.md`, `docs/FORMAT.md`.
-After P3/P4/P5 are done: make `v2` the default in 1.0 (`-DCCUTILS_FORMAT_LEGACY` and
-`CCUTILS_FORMAT=legacy` keep the old output), flip colors to `auto` (P1-color), deprecate the
-global `TimerStats` alias, write the migration guide, and complete `docs/FORMAT.md` (the
-"Not in the machine stream yet" list must be empty by then).
-**Done when:** the migration guide exists and a legacy-mode CI job still passes.
 
 ---
 
