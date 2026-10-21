@@ -306,8 +306,13 @@ static inline int parse_args(int argc, char* argv[], args_t* args) {
         return 0;
     }
 
+    #if defined(REQUIRED_ARGS) || defined(OPTIONAL_ARGS)
     int ok;
+    #endif
+    #ifdef REQUIRED_ARGS
     int i = 1;
+    #endif
+    (void)args;
 
     // Get required arguments
     #ifdef REQUIRED_ARGS

@@ -1,0 +1,137 @@
+== start np=4 ==
+[30m[[Rank 0]][0m
+hello from 0
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+hello from 1
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+hello from 2
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+hello from 3
+[30m[[END Rank 3]][0m
+[97m-+-+-+- multiline -+-+-+-[0m
+[30m[[Rank 0]][0m
+first line of 0
+
+   indented
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+first line of 1
+
+   indented
+odd rank
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+first line of 2
+
+   indented
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+first line of 3
+
+   indented
+odd rank
+[30m[[END Rank 3]][0m
+[97m-+-+-+- multiline END -+-+-+-[0m
+[97m-+-+-+- only_even -+-+-+-[0m
+[30m[[Rank 0]][0m
+even 0
+[30m[[END Rank 0]][0m
+[30m[[Rank 2]][0m
+even 2
+[30m[[END Rank 2]][0m
+[97m-+-+-+- only_even END -+-+-+-[0m
+[97m-+-+-+- no_newline -+-+-+-[0m
+[30m[[Rank 0]][0m
+tail-less 0
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+tail-less 1
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+tail-less 2
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+tail-less 3
+[30m[[END Rank 3]][0m
+[97m-+-+-+- no_newline END -+-+-+-[0m
+[97m-+-+-+- trailing_blank -+-+-+-[0m
+[30m[[Rank 0]][0m
+text 0
+
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+text 1
+
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+text 2
+
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+text 3
+
+[30m[[END Rank 3]][0m
+[97m-+-+-+- trailing_blank END -+-+-+-[0m
+[30m[[Rank 3]][0m
+only the last rank
+[30m[[END Rank 3]][0m
+[97m=+=+=+= solve :: Solve phase =+=+=+=[0m
+[97m=+=+=+= halo :: Halo exchange =+=+=+=[0m
+[97m-+-+-+- ccutils_subsection_json -+-+-+-[0m
+[30m[[Rank 0]][0m
+{"bytes":64,"peer":{"left":-1}}
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+{"bytes":128,"peer":{"left":0}}
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+{"bytes":192,"peer":{"left":1}}
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+{"bytes":256,"peer":{"left":2}}
+[30m[[END Rank 3]][0m
+[97m-+-+-+- ccutils_subsection_json END -+-+-+-[0m
+[97m=+=+=+= halo END =+=+=+=[0m
+[97m-+-+-+- stats -+-+-+-[0m
+[30m[[Rank 0]][0m
+{"a":{"b":0},"x":0}
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+{"a":{"b":2},"x":1}
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+{"a":{"b":4},"x":2}
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+{"a":{"b":6},"x":3}
+[30m[[END Rank 3]][0m
+[97m-+-+-+- stats END -+-+-+-[0m
+[97m-+-+-+- ccutils_rank_json -+-+-+-[0m
+[30m[[Rank 0]][0m
+{"many":[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],"rank":0,"square":0}
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+{"many":[101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101],"rank":1,"square":1}
+[30m[[END Rank 1]][0m
+[30m[[Rank 2]][0m
+{"many":[102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102],"rank":2,"square":4}
+[30m[[END Rank 2]][0m
+[30m[[Rank 3]][0m
+{"many":[103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103,103],"rank":3,"square":9}
+[30m[[END Rank 3]][0m
+[97m-+-+-+- ccutils_rank_json END -+-+-+-[0m
+[97m=-=-= ccutils_global_json =-=-=[0m
+{"np":4}
+[97m=-=-= ccutils_global_json END =-=-=[0m
+[97m=+=+=+= solve END =+=+=+=[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="world" n=12 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="sub" n=4 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="short" n=4 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="root_last" n=4 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+--------------------- Proc 3 of 4. File programs/golden_mpi.cpp Line <n> ---------------------
+process print 3
+--------------------------------------------------------------------------
+== end ==

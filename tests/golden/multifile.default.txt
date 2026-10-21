@@ -1,0 +1,12 @@
+[97m=+=+=+= run :: Whole run =+=+=+=[0m
+[97m=+=+=+= solve :: Solve =+=+=+=[0m
+[97m=-=-= ccutils_json =-=-=[0m
+{"residual":0.25}
+[97m=-=-= ccutils_json END =-=-=[0m
+[97m=+=+=+= solve END =+=+=+=[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="kernel" n=5 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="total" n=1 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97m=-=-= ccutils_json =-=-=[0m
+{"from_main":1,"iterations":4,"note":"set from solver.cpp","report":{"kernel_samples":5},"residual_seen_by_main":0.25}
+[97m=-=-= ccutils_json END =-=-=[0m
+[97m=+=+=+= run END =+=+=+=[0m

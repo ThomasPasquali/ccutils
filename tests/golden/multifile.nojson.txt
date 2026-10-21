@@ -1,0 +1,6 @@
+[97m=+=+=+= run :: Whole run =+=+=+=[0m
+[97m=+=+=+= solve :: Solve =+=+=+=[0m
+[97m=+=+=+= solve END =+=+=+=[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="kernel" n=5 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="total" n=1 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97m=+=+=+= run END =+=+=+=[0m

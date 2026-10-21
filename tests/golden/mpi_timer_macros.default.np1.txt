@@ -1,0 +1,2 @@
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="after_skip" n=1 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="taken" n=1 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m

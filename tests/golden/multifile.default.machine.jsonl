@@ -1,0 +1,13 @@
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","host":"<host>","seq":1}
+{"v":2,"type":"section_start","section":"run","scope":"global","rank":null,"title":"Whole run","seq":2}
+{"v":2,"type":"section_start","section":"run/solve","scope":"global","rank":null,"title":"Solve","seq":3}
+{"v":2,"type":"data","section":"run/solve","scope":"global","rank":null,"key":"residual","value":0.25,"seq":4}
+{"v":2,"type":"section_end","section":"run/solve","scope":"global","rank":null,"ok":true,"seq":5}
+{"v":2,"type":"timer","section":"run","scope":"rank","rank":null,"name":"kernel","group":"Timer","unit":"ms","clock":"steady","n":5,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":6}
+{"v":2,"type":"timer","section":"run","scope":"rank","rank":null,"name":"total","group":"Timer","unit":"ms","clock":"steady","n":1,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":7}
+{"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"from_main","value":1,"seq":8}
+{"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"iterations","value":4,"seq":9}
+{"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"note","value":"set from solver.cpp","seq":10}
+{"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"report","value":{"kernel_samples":5},"seq":11}
+{"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"residual_seen_by_main","value":0.25,"seq":12}
+{"v":2,"type":"section_end","section":"run","scope":"global","rank":null,"ok":true,"seq":13}

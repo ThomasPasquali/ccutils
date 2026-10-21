@@ -1,0 +1,14 @@
+[97m=+=+=+= run :: Whole run =+=+=+=[0m
+[97m=+=+=+= work :: Work =+=+=+=[0m
+worker ran on 2 ranks
+[97m-+-+-+- worker -+-+-+-[0m
+[30m[[Rank 0]][0m
+hello from worker, rank 0
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+hello from worker, rank 1
+[30m[[END Rank 1]][0m
+[97m-+-+-+- worker END -+-+-+-[0m
+[97m=+=+=+= work END =+=+=+=[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="halo" n=6 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97m=+=+=+= run END =+=+=+=[0m

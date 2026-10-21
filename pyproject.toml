@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ccutils"
+version = "0.1.0"
+description = "Python tools for reading CCUTILS output logs"
+readme = "docs/PARSER_V2.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+pandas = ["pandas>=1.5"]
+
+[project.scripts]
+ccutils = "ccutils.cli:main"
+
+[tool.setuptools]
+packages = ["ccutils", "parser"]

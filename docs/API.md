@@ -58,7 +58,7 @@ CCUTILS_CPU_TIMER_STOP(work)
 CCUTILS_TIMER_PRINT(work)
 ```
 
-Elapsed time is milliseconds from `std::chrono::steady_clock`. `CCUTILS_TIMER_VALUES(name)` exposes the underlying `std::vector<float>`. `CCUTILS_TIMER_STATS(name)` returns `ccutils_timers::TimerStats` (`n`, `avg`, sample `stddev`, `min`, `max`, `sum`). Printing variants include `CCUTILS_TIMER_PRINT_LAST`, `CCUTILS_TIMER_PRINT_ALL`, `CCUTILS_TIMER_PRINT_EXCLUDING_FIRST_N`, and `CCUTILS_TIMER_SUM`, `_AVG`, and `_LAST` (up to ten timer names).
+Elapsed time is milliseconds from `std::chrono::steady_clock`. `CCUTILS_TIMER_VALUES(name)` exposes the underlying `std::vector<double>`. `CCUTILS_TIMER_STATS(name)` returns `ccutils_timers::TimerStats` (`n`, `avg`, sample `stddev`, `min`, `max`, `sum`), with compensated summation for `sum`. Printing variants include `CCUTILS_TIMER_PRINT_LAST`, `CCUTILS_TIMER_PRINT_ALL`, `CCUTILS_TIMER_PRINT_EXCLUDING_FIRST_N`, and `CCUTILS_TIMER_SUM`, `_AVG`, and `_LAST` (up to ten timer names).
 
 Timer print macros produce no output when their timer has no samples; aggregate print macros produce no output when all input timers are empty.
 
@@ -69,6 +69,24 @@ CCUTILS_TIMER v=1 type=summary group="Timer" name="work" n=3 avg_ms=1.250000 std
 ```
 
 Summary fields have fixed names and units. Labels are JSON-quoted strings, so quotes, spaces, and line breaks do not break record boundaries. With colors enabled, timer and section markers are ANSI-colored; the CCUTILS parser strips those codes before parsing. Other output (including ordinary `printf`) can be freely interleaved; consumers can select timer records by their prefix. Record types are `summary`, `sample`, `run`, and `aggregate`. Print macros emit no record when the timer has no samples. Run indices start at zero. The `v=1` field identifies this record layout.
+
+## RAII sections
+
+`ccutils::Section` opens a section when constructed and closes it when it leaves
+scope. Use `put()` to add data. Call `end()` to close it explicitly. During exception
+unwinding, its destructor omits the human end banner and records `ok:false`.
+
+```cpp
+{
+  ccutils::Section solve("solve", "Solve phase");
+  solve.put("iterations", 12);
+}
+```
+
+With MPI, `ccutils::MpiSection::end()` is collective and all ranks must call it. Its
+destructor only closes local state and never gathers; call `end()` when rank-local data
+must be gathered and printed.
+
 
 ## Other core headers
 

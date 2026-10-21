@@ -1,6 +1,6 @@
 # Parsing CCUTILS output
 
-The parser extracts named sections, their titles, plain-text content, JSON blocks, MPI rank blocks, and timer records. It recognizes multiline pretty-printed JSON inside MPI rank output. CMake installation places `ccutils_parser.py` in Python's site-packages, so installed scripts can import it directly. In a source checkout, use `from parser import ...` instead.
+The parser extracts named sections, their titles, plain-text content, JSON blocks, MPI rank blocks, and timer records. It recognizes multiline pretty-printed JSON inside MPI rank output. Install the Python package and use `import ccutils`; in a source checkout, add the repository root to `PYTHONPATH` first.
 
 ```python
 from ccutils_parser import describe_structure, parse_file, pretty_print_structure

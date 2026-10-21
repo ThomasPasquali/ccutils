@@ -1,0 +1,45 @@
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","mpi":{"library":"<mpi>","world_size":2,"wtime_is_global":false,"wtick_s":1e-09},"host":"<host>","seq":1}
+{"v":2,"type":"text","section":null,"scope":"global","rank":null,"print":null,"call":1,"part":0,"last":true,"trailing_newline":true,"lines":["== start np=2 =="],"seq":2}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":null,"call":1,"part":0,"last":true,"trailing_newline":true,"lines":["hello from 0"],"seq":3}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":null,"call":1,"part":0,"last":true,"trailing_newline":true,"lines":["hello from 1"],"seq":2}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":"multiline","call":2,"part":0,"last":true,"trailing_newline":true,"lines":["first line of 0","","   indented"],"seq":4}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":"multiline","call":2,"part":0,"last":true,"trailing_newline":true,"lines":["first line of 1","","   indented","odd rank"],"seq":3}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":"only_even","call":3,"part":0,"last":true,"trailing_newline":true,"lines":["even 0"],"seq":5}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":"only_even","call":3,"part":0,"last":true,"trailing_newline":false,"lines":[],"seq":4}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":"no_newline","call":4,"part":0,"last":true,"trailing_newline":false,"lines":["tail-less 0"],"seq":6}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":"no_newline","call":4,"part":0,"last":true,"trailing_newline":false,"lines":["tail-less 1"],"seq":5}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":"trailing_blank","call":5,"part":0,"last":true,"trailing_newline":true,"lines":["text 0",""],"seq":7}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":"trailing_blank","call":5,"part":0,"last":true,"trailing_newline":true,"lines":["text 1",""],"seq":6}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":"nobody","call":6,"part":0,"last":true,"trailing_newline":false,"lines":[],"seq":8}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":"nobody","call":6,"part":0,"last":true,"trailing_newline":false,"lines":[],"seq":7}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":0,"print":null,"call":7,"part":0,"last":true,"trailing_newline":false,"lines":[],"seq":9}
+{"v":2,"type":"text","section":null,"scope":"rank","rank":1,"print":null,"call":7,"part":0,"last":true,"trailing_newline":true,"lines":["only the last rank"],"seq":8}
+{"v":2,"type":"section_start","section":"solve","scope":"global","rank":null,"title":"Solve phase","seq":10}
+{"v":2,"type":"text","section":"solve","scope":"global","rank":null,"print":null,"call":2,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= solve :: Solve phase =+=+=+=\u001b[0m"],"seq":11}
+{"v":2,"type":"section_start","section":"solve/halo","scope":"global","rank":null,"title":"Halo exchange","seq":12}
+{"v":2,"type":"text","section":"solve/halo","scope":"global","rank":null,"print":null,"call":3,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= halo :: Halo exchange =+=+=+=\u001b[0m"],"seq":13}
+{"v":2,"type":"data","section":"solve/halo","scope":"rank","rank":0,"key":"bytes","value":64,"seq":14}
+{"v":2,"type":"data","section":"solve/halo","scope":"rank","rank":0,"key":"peer","value":{"left":-1},"seq":15}
+{"v":2,"type":"text","section":"solve/halo","scope":"rank","rank":0,"print":"ccutils_subsection_json","call":8,"part":0,"last":true,"trailing_newline":true,"lines":["{\"bytes\":64,\"peer\":{\"left\":-1}}"],"seq":16}
+{"v":2,"type":"data","section":"solve/halo","scope":"rank","rank":1,"key":"bytes","value":128,"seq":9}
+{"v":2,"type":"data","section":"solve/halo","scope":"rank","rank":1,"key":"peer","value":{"left":0},"seq":10}
+{"v":2,"type":"text","section":"solve/halo","scope":"rank","rank":1,"print":"ccutils_subsection_json","call":8,"part":0,"last":true,"trailing_newline":true,"lines":["{\"bytes\":128,\"peer\":{\"left\":0}}"],"seq":11}
+{"v":2,"type":"text","section":"solve/halo","scope":"global","rank":null,"print":null,"call":4,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= halo END =+=+=+=\u001b[0m"],"seq":17}
+{"v":2,"type":"section_end","section":"solve/halo","scope":"global","rank":null,"ok":true,"seq":18}
+{"v":2,"type":"text","section":"solve","scope":"rank","rank":0,"print":"stats","call":9,"part":0,"last":true,"trailing_newline":true,"lines":["{\"a\":{\"b\":0},\"x\":0}"],"seq":19}
+{"v":2,"type":"data","section":"solve","scope":"rank","rank":0,"key":"many","value":[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],"seq":20}
+{"v":2,"type":"data","section":"solve","scope":"rank","rank":0,"key":"rank","value":0,"seq":21}
+{"v":2,"type":"data","section":"solve","scope":"rank","rank":0,"key":"square","value":0,"seq":22}
+{"v":2,"type":"text","section":"solve","scope":"rank","rank":0,"print":"ccutils_rank_json","call":10,"part":0,"last":true,"trailing_newline":true,"lines":["{\"many\":[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],\"rank\":0,\"square\":0}"],"seq":23}
+{"v":2,"type":"text","section":"solve","scope":"rank","rank":1,"print":"stats","call":9,"part":0,"last":true,"trailing_newline":true,"lines":["{\"a\":{\"b\":2},\"x\":1}"],"seq":12}
+{"v":2,"type":"data","section":"solve","scope":"rank","rank":1,"key":"many","value":[101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101],"seq":13}
+{"v":2,"type":"data","section":"solve","scope":"rank","rank":1,"key":"rank","value":1,"seq":14}
+{"v":2,"type":"data","section":"solve","scope":"rank","rank":1,"key":"square","value":1,"seq":15}
+{"v":2,"type":"text","section":"solve","scope":"rank","rank":1,"print":"ccutils_rank_json","call":10,"part":0,"last":true,"trailing_newline":true,"lines":["{\"many\":[101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101,101],\"rank\":1,\"square\":1}"],"seq":16}
+{"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"np","value":2,"seq":24}
+{"v":2,"type":"text","section":"solve","scope":"global","rank":null,"print":null,"call":5,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= solve END =+=+=+=\u001b[0m"],"seq":25}
+{"v":2,"type":"section_end","section":"solve","scope":"global","rank":null,"ok":true,"seq":26}
+{"v":2,"type":"timer","section":null,"scope":"comm","rank":null,"name":"world","group":"MPI Timer","unit":"ms","clock":"mpi_wtime","comm":{"name":"MPI_COMM_WORLD","size":2,"root":0},"n":6,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":27}
+{"v":2,"type":"timer","section":null,"scope":"comm","rank":null,"name":"sub","group":"MPI Timer","unit":"ms","clock":"mpi_wtime","comm":{"name":"","size":2,"root":0},"n":4,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":28}
+{"v":2,"type":"timer","section":null,"scope":"comm","rank":null,"name":"short","group":"MPI Timer","unit":"ms","clock":"mpi_wtime","comm":{"name":"MPI_COMM_WORLD","size":2,"root":0},"n":2,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":29}
+{"v":2,"type":"text","section":null,"scope":"global","rank":null,"print":null,"call":6,"part":0,"last":true,"trailing_newline":true,"lines":["== end =="],"seq":30}

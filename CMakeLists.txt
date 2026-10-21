@@ -12,6 +12,7 @@ endif()
 
 option(CCUTILS_ENABLE_CUDA "Enable CUDA utilities" OFF)
 option(CCUTILS_ENABLE_MPI "Enable MPI utilities" OFF)
+option(CCUTILS_BUILD_TESTS "Register the golden-output tests with ctest" OFF)
 
 # JSON output is part of the default API. Vendor the small header-only
 # dependency into the install tree so installed Make and CMake users work alike.
@@ -90,4 +91,9 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
   else()
     message(FATAL_ERROR "Could not determine Python site-packages install path")
   endif()
+endif()
+
+if(CCUTILS_BUILD_TESTS AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  enable_testing()
+  add_subdirectory(tests)
 endif()

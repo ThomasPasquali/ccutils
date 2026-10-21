@@ -60,6 +60,10 @@ Link `ccutils::ccutils` in CMake, or add the install `include` directory to your
 
 Section markers and JSON block markers are stable line-oriented delimiters. JSON records are valid JSON and emitted only for nonempty sections. Timer macros emit versioned key/value records only when there are samples; records can be mixed with free-form output and selected by their `CCUTILS_TIMER` prefix. Set `CCUTILS_COLOR_LEVEL` from 0 (no color) to 3 (bright foreground and background colors) to choose ANSI color intensity. See [the API guide](docs/API.md) and [parser documentation](docs/examples/PARSER.md).
 
+## Multi-file projects
+
+Sections, timers and JSON objects are found by name, so a function in another file can update what `main()` created, without passing anything around. See [multi-file usage](docs/MULTIFILE.md). To analyse a run in Python, see the [parser guide](docs/PARSER_V2.md). The design and the list of remaining work are in [docs/DESIGN.md](docs/DESIGN.md) and [docs/TODO.md](docs/TODO.md). Output can be redirected to files or split into a human and a machine-readable stream: see [output destinations](docs/OUTPUT.md) and [the record format](docs/FORMAT.md).
+
 ## Examples
 
 Build examples with CMake or Make from `examples/`. See [prints](docs/examples/PRINTS.md), [timers](docs/examples/TIMERS.md), [MPI](docs/examples/MPI_MACROS.md), and [CUDA](docs/examples/CUDA_MACROS.md).

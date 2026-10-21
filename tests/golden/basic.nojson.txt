@@ -1,0 +1,18 @@
+[97m=+=+=+= solve :: Solve phase =+=+=+=[0m
+[97m=+=+=+= spmv :: Sparse mat-vec =+=+=+=[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="kernel" n=5 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=sample group="Timer" name="kernel" elapsed_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=run name="other" index=0 elapsed_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=run name="other" index=1 elapsed_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=run name="other" index=2 elapsed_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="kernel" n=3 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="My \"quoted\" label" name="kernel" n=5 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Custom" name="other" n=3 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=aggregate operation=sum name="total" elapsed_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=aggregate operation=sum_avg name="total_avg" elapsed_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=aggregate operation=sum_last name="total_last" elapsed_ms=<f>[0m
+[97m=+=+=+= spmv END =+=+=+=[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="solve_inner" n=1 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="shortcut" n=1 avg_ms=<f> stddev_ms=<f> min_ms=<f> max_ms=<f> sum_ms=<f>[0m
+[97m=+=+=+= solve END =+=+=+=[0m
+[97m--------------------  done  --------------------[0m

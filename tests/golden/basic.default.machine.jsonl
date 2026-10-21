@@ -1,0 +1,25 @@
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","host":"<host>","seq":1}
+{"v":2,"type":"section_start","section":"solve","scope":"global","rank":null,"title":"Solve phase","seq":2}
+{"v":2,"type":"section_start","section":"solve/spmv","scope":"global","rank":null,"title":"Sparse mat-vec","seq":3}
+{"v":2,"type":"timer","section":"solve/spmv","scope":"rank","rank":null,"name":"kernel","group":"Timer","unit":"ms","clock":"steady","n":5,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":4}
+{"v":2,"type":"timer_sample","section":"solve/spmv","scope":"rank","rank":null,"name":"kernel","group":"Timer","unit":"ms","clock":"steady","index":4,"value":"<f>","last":true,"seq":5}
+{"v":2,"type":"timer_sample","section":"solve/spmv","scope":"rank","rank":null,"name":"other","group":"Timer","unit":"ms","clock":"steady","index":0,"value":"<f>","last":false,"seq":6}
+{"v":2,"type":"timer_sample","section":"solve/spmv","scope":"rank","rank":null,"name":"other","group":"Timer","unit":"ms","clock":"steady","index":1,"value":"<f>","last":false,"seq":7}
+{"v":2,"type":"timer_sample","section":"solve/spmv","scope":"rank","rank":null,"name":"other","group":"Timer","unit":"ms","clock":"steady","index":2,"value":"<f>","last":false,"seq":8}
+{"v":2,"type":"timer","section":"solve/spmv","scope":"rank","rank":null,"name":"kernel","group":"Timer","unit":"ms","clock":"steady","n":3,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":9}
+{"v":2,"type":"timer","section":"solve/spmv","scope":"rank","rank":null,"name":"kernel","group":"My \"quoted\" label","unit":"ms","clock":"steady","n":5,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":10}
+{"v":2,"type":"timer","section":"solve/spmv","scope":"rank","rank":null,"name":"other","group":"Custom","unit":"ms","clock":"steady","n":3,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":11}
+{"v":2,"type":"timer_agg","section":"solve/spmv","scope":"rank","rank":null,"name":"total","op":"sum","unit":"ms","clock":"steady","value":"<f>","seq":12}
+{"v":2,"type":"timer_agg","section":"solve/spmv","scope":"rank","rank":null,"name":"total_avg","op":"sum_avg","unit":"ms","clock":"steady","value":"<f>","seq":13}
+{"v":2,"type":"timer_agg","section":"solve/spmv","scope":"rank","rank":null,"name":"total_last","op":"sum_last","unit":"ms","clock":"steady","value":"<f>","seq":14}
+{"v":2,"type":"data","section":"solve/spmv","scope":"global","rank":null,"key":"flops","value":12345,"seq":15}
+{"v":2,"type":"data","section":"solve/spmv","scope":"global","rank":null,"key":"peak","value":{"gflops":2.5},"seq":16}
+{"v":2,"type":"section_end","section":"solve/spmv","scope":"global","rank":null,"ok":true,"seq":17}
+{"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"a","value":1,"seq":18}
+{"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"b","value":{"c":"text"},"seq":19}
+{"v":2,"type":"timer","section":"solve","scope":"rank","rank":null,"name":"solve_inner","group":"Timer","unit":"ms","clock":"steady","n":1,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":20}
+{"v":2,"type":"timer","section":"solve","scope":"rank","rank":null,"name":"shortcut","group":"Timer","unit":"ms","clock":"steady","n":1,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":21}
+{"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"many","value":[12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345,12345],"seq":22}
+{"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"mesh","value":{"cells":100},"seq":23}
+{"v":2,"type":"data","section":"solve","scope":"global","rank":null,"key":"residual","value":1.5e-09,"seq":24}
+{"v":2,"type":"section_end","section":"solve","scope":"global","rank":null,"ok":true,"seq":25}

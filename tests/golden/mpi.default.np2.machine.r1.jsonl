@@ -1,0 +1,2 @@
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","mpi":{"library":"<mpi>","world_size":2,"wtime_is_global":false,"wtick_s":1e-09},"host":"<host>","seq":1}
+{"v":2,"type":"timer","section":null,"scope":"comm","rank":null,"name":"root_last","group":"MPI Timer","unit":"ms","clock":"mpi_wtime","comm":{"name":"MPI_COMM_WORLD","size":2,"root":1},"n":2,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":17}

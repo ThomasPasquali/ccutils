@@ -1,0 +1,24 @@
+[97m=+=+=+= run :: Whole run =+=+=+=[0m
+@ccutils {"v":2,"type":"section_start","section":"run","scope":"global","rank":null,"title":"Whole run","seq":1}
+[97m=+=+=+= solve :: Solve =+=+=+=[0m
+@ccutils {"v":2,"type":"section_start","section":"run/solve","scope":"global","rank":null,"title":"Solve","seq":2}
+@ccutils {"v":2,"type":"data","section":"run/solve","scope":"global","rank":null,"key":"residual","value":0.25,"seq":3}
+[97m=-=-= ccutils_json =-=-=[0m
+{"residual":0.25}
+[97m=-=-= ccutils_json END =-=-=[0m
+[97m=+=+=+= solve END =+=+=+=[0m
+@ccutils {"v":2,"type":"section_end","section":"run/solve","scope":"global","rank":null,"ok":true,"seq":4}
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="kernel" n=5 avg_ms=0.001541 stddev_ms=0.000843 min_ms=0.000032 max_ms=0.001926 sum_ms=0.007703[0m
+@ccutils {"v":2,"type":"timer","section":"run","scope":"rank","rank":null,"name":"kernel","group":"Timer","unit":"ms","clock":"steady","n":5,"avg":0.0015406001,"sd":0.0008433468,"min":3.2e-05,"max":0.0019260001,"sum":0.007703,"seq":5}
+[97mCCUTILS_TIMER v=1 type=summary group="Timer" name="total" n=1 avg_ms=0.073761 stddev_ms=0.000000 min_ms=0.073761 max_ms=0.073761 sum_ms=0.073761[0m
+@ccutils {"v":2,"type":"timer","section":"run","scope":"rank","rank":null,"name":"total","group":"Timer","unit":"ms","clock":"steady","n":1,"avg":0.073761,"sd":0,"min":0.073761,"max":0.073761,"sum":0.073761,"seq":6}
+@ccutils {"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"from_main","value":1,"seq":7}
+@ccutils {"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"iterations","value":4,"seq":8}
+@ccutils {"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"note","value":"set from solver.cpp","seq":9}
+@ccutils {"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"report","value":{"kernel_samples":5},"seq":10}
+@ccutils {"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"residual_seen_by_main","value":0.25,"seq":11}
+[97m=-=-= ccutils_json =-=-=[0m
+{"from_main":1,"iterations":4,"note":"set from solver.cpp","report":{"kernel_samples":5},"residual_seen_by_main":0.25}
+[97m=-=-= ccutils_json END =-=-=[0m
+[97m=+=+=+= run END =+=+=+=[0m
+@ccutils {"v":2,"type":"section_end","section":"run","scope":"global","rank":null,"ok":true,"seq":12}

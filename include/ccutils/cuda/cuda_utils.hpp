@@ -1,5 +1,5 @@
-#ifndef __CCUTILS_CUDA_UTILS__
-#define __CCUTILS_CUDA_UTILS__
+#ifndef CCUTILS_CUDA_UTILS_HPP
+#define CCUTILS_CUDA_UTILS_HPP
 
 #ifndef CCUTILS_ENABLE_CUDA
 #error "ccutils CUDA headers require -DCCUTILS_ENABLE_CUDA"

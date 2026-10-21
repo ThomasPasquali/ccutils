@@ -1,6 +1,7 @@
-#ifndef __CCUTILS_FORMATS__
-#define __CCUTILS_FORMATS__
+#ifndef CCUTILS_FORMATS_H
+#define CCUTILS_FORMATS_H
 
+// These are the pinned LEGACY formats. v2 uses emitter render helpers below; keep these strings unchanged.
 #include "colors.h"
 
 /**********************************************************************/

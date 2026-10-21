@@ -1,0 +1,25 @@
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","mpi":{"library":"<mpi>","world_size":2,"wtime_is_global":false,"wtick_s":1e-09},"host":"<host>","seq":1}
+{"v":2,"type":"section_start","section":"run","scope":"global","rank":null,"title":"Whole run","seq":2}
+{"v":2,"type":"text","section":"run","scope":"global","rank":null,"print":null,"call":1,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= run :: Whole run =+=+=+=\u001b[0m"],"seq":3}
+{"v":2,"type":"section_start","section":"run/work","scope":"global","rank":null,"title":"Work","seq":4}
+{"v":2,"type":"text","section":"run/work","scope":"global","rank":null,"print":null,"call":2,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= work :: Work =+=+=+=\u001b[0m"],"seq":5}
+{"v":2,"type":"text","section":"run/work","scope":"global","rank":null,"print":null,"call":3,"part":0,"last":true,"trailing_newline":true,"lines":["worker ran on 2 ranks"],"seq":6}
+{"v":2,"type":"text","section":"run/work","scope":"rank","rank":0,"print":"worker","call":1,"part":0,"last":true,"trailing_newline":true,"lines":["hello from worker, rank 0"],"seq":7}
+{"v":2,"type":"data","section":"run/work","scope":"rank","rank":0,"key":"samples","value":3,"seq":8}
+{"v":2,"type":"text","section":"run/work","scope":"rank","rank":0,"print":"ccutils_subsection_json","call":2,"part":0,"last":true,"trailing_newline":true,"lines":["{\"samples\":3}"],"seq":9}
+{"v":2,"type":"run_start","section":null,"scope":"global","rank":null,"ccutils_version":"1.0.0","format":"legacy","mpi":{"library":"<mpi>","world_size":2,"wtime_is_global":false,"wtick_s":1e-09},"host":"<host>","seq":1}
+{"v":2,"type":"text","section":"run/work","scope":"rank","rank":1,"print":"worker","call":1,"part":0,"last":true,"trailing_newline":true,"lines":["hello from worker, rank 1"],"seq":2}
+{"v":2,"type":"data","section":"run/work","scope":"rank","rank":1,"key":"samples","value":3,"seq":3}
+{"v":2,"type":"text","section":"run/work","scope":"rank","rank":1,"print":"ccutils_subsection_json","call":2,"part":0,"last":true,"trailing_newline":true,"lines":["{\"samples\":3}"],"seq":4}
+{"v":2,"type":"text","section":"run/work","scope":"global","rank":null,"print":null,"call":4,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= work END =+=+=+=\u001b[0m"],"seq":10}
+{"v":2,"type":"section_end","section":"run/work","scope":"global","rank":null,"ok":true,"seq":11}
+{"v":2,"type":"text","section":"run","scope":"rank","rank":0,"print":"stats","call":3,"part":0,"last":true,"trailing_newline":true,"lines":["{\"rank\":0}"],"seq":12}
+{"v":2,"type":"timer","section":"run","scope":"comm","rank":null,"name":"halo","group":"MPI Timer","unit":"ms","clock":"mpi_wtime","comm":{"name":"MPI_COMM_WORLD","size":2,"root":0},"n":6,"avg":"<f>","sd":"<f>","min":"<f>","max":"<f>","sum":"<f>","seq":13}
+{"v":2,"type":"data","section":"run","scope":"rank","rank":0,"key":"rank","value":0,"seq":14}
+{"v":2,"type":"text","section":"run","scope":"rank","rank":0,"print":"ccutils_rank_json","call":4,"part":0,"last":true,"trailing_newline":true,"lines":["{\"rank\":0}"],"seq":15}
+{"v":2,"type":"text","section":"run","scope":"rank","rank":1,"print":"stats","call":3,"part":0,"last":true,"trailing_newline":true,"lines":["{\"rank\":1}"],"seq":5}
+{"v":2,"type":"data","section":"run","scope":"rank","rank":1,"key":"rank","value":1,"seq":6}
+{"v":2,"type":"text","section":"run","scope":"rank","rank":1,"print":"ccutils_rank_json","call":4,"part":0,"last":true,"trailing_newline":true,"lines":["{\"rank\":1}"],"seq":7}
+{"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"iterations","value":3,"seq":16}
+{"v":2,"type":"text","section":"run","scope":"global","rank":null,"print":null,"call":5,"part":0,"last":true,"trailing_newline":true,"lines":["\u001b[97m=+=+=+= run END =+=+=+=\u001b[0m"],"seq":17}
+{"v":2,"type":"section_end","section":"run","scope":"global","rank":null,"ok":true,"seq":18}

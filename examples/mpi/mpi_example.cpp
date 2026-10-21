@@ -39,8 +39,10 @@ int main(int argc, char** argv) {
         CCUTILS_MPI_PRINTF_ONCE("[Run %d] rank 0 finished iteration\n", run);
     }
 
-    // --- Close timers (print + destroy) ---
-    CCUTILS_MPI_TIMER_CLOSE(work1);
+    // --- Print the statistics (collective over the communicator) and release the timer ---
+    // (CCUTILS_MPI_TIMER_CLOSE would also stop the timer, which is already stopped here.)
+    CCUTILS_MPI_TIMER_PRINT(work1, "work1", MPI_COMM_WORLD);
+    CCUTILS_MPI_TIMER_DESTROY(work1);
 
     // --- Print macros ---
     CCUTILS_MPI_ALL_PRINT(

@@ -1,0 +1,47 @@
+[97m=+=+=+= run :: Whole run =+=+=+=[0m
+@ccutils {"v":2,"type":"section_start","section":"run","scope":"global","rank":null,"title":"Whole run","seq":1}
+[97m=+=+=+= work :: Work =+=+=+=[0m
+@ccutils {"v":2,"type":"section_start","section":"run/work","scope":"global","rank":null,"title":"Work","seq":2}
+worker ran on 2 ranks
+[97m-+-+-+- worker -+-+-+-[0m
+[30m[[Rank 0]][0m
+hello from worker, rank 0
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+hello from worker, rank 1
+[30m[[END Rank 1]][0m
+[97m-+-+-+- worker END -+-+-+-[0m
+[97m-+-+-+- ccutils_subsection_json -+-+-+-[0m
+[30m[[Rank 0]][0m
+{"samples":3}
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+{"samples":3}
+[30m[[END Rank 1]][0m
+[97m-+-+-+- ccutils_subsection_json END -+-+-+-[0m
+[97m=+=+=+= work END =+=+=+=[0m
+@ccutils {"v":2,"type":"section_end","section":"run/work","scope":"global","rank":null,"ok":true,"seq":3}
+[97m-+-+-+- stats -+-+-+-[0m
+[30m[[Rank 0]][0m
+{"rank":0}
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+{"rank":1}
+[30m[[END Rank 1]][0m
+[97m-+-+-+- stats END -+-+-+-[0m
+[97mCCUTILS_TIMER v=1 type=summary group="MPI Timer" name="halo" n=6 avg_ms=0.000221 stddev_ms=0.000320 min_ms=0.000027 max_ms=0.000787 sum_ms=0.001325[0m
+@ccutils {"v":2,"type":"timer","section":"run","scope":"comm","rank":null,"name":"halo","group":"MPI Timer","unit":"ms","clock":"mpi_wtime","comm":{"name":"MPI_COMM_WORLD","size":2,"root":0},"n":6,"avg":0.00022083333333333316,"sd":0.00032030511495551673,"min":2.699999999999991e-05,"max":0.000787,"sum":0.001324999999999999,"seq":4}
+[97m-+-+-+- ccutils_rank_json -+-+-+-[0m
+[30m[[Rank 0]][0m
+{"rank":0}
+[30m[[END Rank 0]][0m
+[30m[[Rank 1]][0m
+{"rank":1}
+[30m[[END Rank 1]][0m
+[97m-+-+-+- ccutils_rank_json END -+-+-+-[0m
+@ccutils {"v":2,"type":"data","section":"run","scope":"global","rank":null,"key":"iterations","value":3,"seq":5}
+[97m=-=-= ccutils_global_json =-=-=[0m
+{"iterations":3}
+[97m=-=-= ccutils_global_json END =-=-=[0m
+[97m=+=+=+= run END =+=+=+=[0m
+@ccutils {"v":2,"type":"section_end","section":"run","scope":"global","rank":null,"ok":true,"seq":6}

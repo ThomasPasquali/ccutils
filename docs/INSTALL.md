@@ -36,7 +36,11 @@ cmake -S . -B build \
 
 Enabling a module requires a usable MPI C++ implementation or CUDA toolkit. The install exports only targets enabled at configure time.
 
-The Python output parser (Python 3.8 or newer) is installed as `ccutils_parser.py` into the selected interpreter's site-packages directory. It can then be imported with `import ccutils_parser`. If you choose a custom install prefix outside Python's active search paths, add the corresponding `lib/pythonX.Y/site-packages` directory under that prefix to `PYTHONPATH`.
+Install the Python package from the repository root with `python3 -m pip install .`.
+This provides `import ccutils` and the `ccutils tree|timers|data|check` commands. Install
+`.[pandas]` to enable the optional DataFrame helpers. The CMake install also keeps the
+standalone `ccutils_parser.py` compatibility module in Python's site-packages directory;
+it exposes the legacy `Document` parser API.
 
 The installer also places the visualization CLI in the installer's `bin` directory. Run it as `ccutils-visualize my_output.log`.
 
