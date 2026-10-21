@@ -38,11 +38,13 @@ Enabling a module requires a usable MPI C++ implementation or CUDA toolkit. The 
 
 Install the Python package from the repository root with `python3 -m pip install .`.
 This provides `import ccutils` and the `ccutils tree|timers|data|check` commands. Install
-`.[pandas]` to enable the optional DataFrame helpers. The CMake install also keeps the
-standalone `ccutils_parser.py` compatibility module in Python's site-packages directory;
-it exposes the legacy `Document` parser API.
+`.[pandas]` to enable the optional DataFrame helpers. CMake installation places the `ccutils`
+package and its compatibility modules in Python's site-packages directory. The interactive
+`install.sh` installer also places a `ccutils` launcher in `~/.local/bin` alongside
+`ccutils-visualize`; source the shell configuration it updates to add those commands to
+`PATH` and the Python modules to `PYTHONPATH`.
 
-The installer also places the visualization CLI in the installer's `bin` directory. Run it as `ccutils-visualize my_output.log`.
+Run the visualization command as `ccutils-visualize my_output.log`.
 
 ## CMake consumer
 

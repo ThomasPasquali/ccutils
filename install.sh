@@ -259,6 +259,8 @@ echo -e "${GREEN}[5] Installing to $INSTALL_DIR ...${RESET}"
 cmake --install build --prefix "$INSTALL_DIR"
 cp "$BUILD_SOURCE_DIR/parser/ccutils_visualize.py" "$INSTALL_BIN/ccutils-visualize"
 chmod +x "$INSTALL_BIN/ccutils-visualize"
+cp "$BUILD_SOURCE_DIR/tools/ccutils" "$INSTALL_BIN/ccutils"
+chmod +x "$INSTALL_BIN/ccutils"
 
 #####################################
 # ENVIRONMENT UPDATES

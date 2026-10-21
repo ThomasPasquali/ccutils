@@ -88,6 +88,14 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(CCUTILS_PYTHON_PATH_RESULT EQUAL 0 AND NOT CCUTILS_PYTHON_INSTALL_DIR STREQUAL "")
     install(FILES parser/ccutils_parser.py DESTINATION "${CCUTILS_PYTHON_INSTALL_DIR}")
+    install(DIRECTORY ccutils/
+      DESTINATION "${CCUTILS_PYTHON_INSTALL_DIR}/ccutils"
+      FILES_MATCHING PATTERN "*.py"
+      PATTERN "__pycache__" EXCLUDE)
+    install(DIRECTORY parser/
+      DESTINATION "${CCUTILS_PYTHON_INSTALL_DIR}/parser"
+      FILES_MATCHING PATTERN "*.py"
+      PATTERN "__pycache__" EXCLUDE)
   else()
     message(FATAL_ERROR "Could not determine Python site-packages install path")
   endif()

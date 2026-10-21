@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Run the CCUTILS log inspection command."""
+
+from ccutils.cli import main
+
+raise SystemExit(main())
