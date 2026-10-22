@@ -1,78 +1,117 @@
 #!/usr/bin/env python3
 """logviz - follow a structured log file and explore it as a live, interactive web page.
 
-Usage:  python logviz.py run.log [-p 8000] [--host 127.0.0.1] [--no-follow] [--no-browser]
-                         [--lenient | --patterns my_patterns.json]
-Structure (sections / MPI prints / ranks / JSON blocks) comes from ccutils_parser.py; if the default
-CCUTILS markers are not found, any ===/---/### banner is used as a section instead.
+Usage:  python ccutils_visualize.py run.log [-p 8000] [--host 127.0.0.1] [--no-follow] [--no-browser]
+Structure, timers, rank data, and MPI prints come from the current ccutils Run parser.
 
-No third-party packages. Format-agnostic: it auto-detects
-  * section banners   (=+=+= name :: title =+=+=  ...  =+=+= name END =+=+=, --- x ---, ### x ###)
-  * blocks            ([[Rank 0]] ... [[END Rank 0]])
-  * key=value pairs   (also "Key: value", "[TAG] 12.3 MB") -> metrics
-  * JSON lines        -> collapsible tree + numeric leaves become metrics
-  * ANSI colour codes (also when the ESC byte was lost, e.g. "[96m")
+Accepts the formats supported by :mod:`ccutils.ccutils_run`: machine JSONL, inline
+records, current human logs, and legacy logs. No third-party packages are required.
 """
-import argparse, html, json, math, os, re, sys, threading, webbrowser
+import argparse, glob, html, json, math, os, sys, threading, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-import ccutils_parser  # structure detection (sections, MPI prints, ranks); keep next to this file
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from ccutils import ccutils_run  # noqa: E402
 
-def parse(text, patterns=None):
-    # ccutils_parser annotates each line (section / MPI print / rank). Metrics are derived client-side
-    # from the JSON; timers come from the parser's CCUTILS_TIMER records.
-    doc = ccutils_parser.MPIOutputParser(patterns).parse_document(text)
-    if patterns is None and not doc.marker_count:      # unknown banner style: generic fallback
-        doc = ccutils_parser.MPIOutputParser(ccutils_parser.ParserPatterns.lenient()).parse_document(text)
-    recs, secs, seen = [], {}, {}
-    for sec in doc.all_sections():
-        secs[sec.path] = sec.title
-        for name in sec.mpi_all_prints:
-            secs[f'{sec.path}/{name}'] = 'MPI all-print'
-    for ln in doc.lines:
-        s, d = ln.text, ln.data
-        r = {'i': ln.no - 1, 'k': 'text', 't': s, 's': ln.section + ('/' + ln.mpi if ln.mpi else ''),
-             'b': f'Rank {ln.rank}' if ln.rank is not None else ''}
-        if ln.kind == 'marker':
-            r['k'] = 'mark'
-        elif ln.kind == 'json_body':
-            r['k'] = 'jbody'
-        elif ln.kind == 'timer' and d is not None:
-            f = {k: (v if not isinstance(v, float) or math.isfinite(v) else str(v)) for k, v in d.fields.items()}
-            r.update(k='timer', tm={'type': d.record_type, 'f': f})
-        elif s.strip() in ('...', '\u2026'):
-            r['k'] = 'gap'
-        if r['k'] != 'timer' and d is not None and ln.kind in ('json', 'marker'):
-            key = (r['s'], r['b'])                      # occurrence number: repeated sections = separate runs
-            r['o'] = seen.get(key, 0)
-            seen[key] = r['o'] + 1
-            r.update(k='json', j=d, t=s[:400])
-        recs.append(r)
-    return {'recs': recs, 'secs': secs, 'warnings': doc.warnings}
+def parse(text):
+    """Adapt the current ccutils Run model to the visualizer's browser API."""
+    return view_run(ccutils_run.loads(text))
+
+
+def view_run(run):
+    recs, secs = [], {'': 'Outside sections'}
+
+    def clean(value):
+        if isinstance(value, float) and not math.isfinite(value):
+            return str(value)
+        if isinstance(value, dict):
+            return {key: clean(child) for key, child in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [clean(child) for child in value]
+        return value
+
+    def add(kind, section, label, body='', **fields):
+        row = {'i': len(recs), 'k': kind, 't': str(body), 's': section or '', 'b': label or ''}
+        row.update(clean(fields))
+        recs.append(row)
+
+    for sec in [run.outside, *run.sections()]:
+        secs[sec.path] = sec.title or ('Outside sections' if not sec.path else sec.name)
+        if sec.path:
+            add('mark', sec.path, '', f'== {sec.path} :: {sec.title} ==')
+        if sec.data:
+            values = dict(sec.data)
+            add('json', sec.path, 'Global data', json.dumps(values, ensure_ascii=False),
+                j=values, o=0, container=sec.path)
+        for rank, values in sec.rank_data.items():
+            label = 'Rank ' + str(rank) if rank is not None else 'Rank unknown'
+            add('json', sec.path, label + ' data', json.dumps(values, ensure_ascii=False),
+                j=values, o=0, container=sec.path, rank=rank)
+        for name, timer in sec.timers.items():
+            for summary in timer.summaries:
+                fields = {key: getattr(summary, key) for key in (
+                    'name', 'group', 'scope', 'rank', 'unit', 'clock', 'n', 'avg', 'sd',
+                    'min', 'max', 'sum', 'comm', 'per_rank', 'rank_stats', 'imbalance',
+                    'slowest_rank', 'ranks_reporting', 'errors') if getattr(summary, key) is not None}
+                label = f'Rank {summary.rank}' if summary.rank is not None else ''
+                if summary.comm:
+                    label = f"Comm {summary.comm.get('name', '')}"
+                add('timer', sec.path, label, f"{name}: {summary.avg} {summary.unit}",
+                    tm={'type': 'timer', 'f': fields}, container=sec.path, timer_name=name)
+            for sample in timer.samples:
+                fields = {'name': name, **sample}
+                kind = 'timer_sample' if 'value' in sample else 'timer_samples'
+                add('timer', sec.path, f"Rank {sample.get('rank')}" if sample.get('rank') is not None else '',
+                    f"{name}: {sample.get('value', sample.get('values'))}",
+                    tm={'type': kind, 'f': fields}, container=sec.path, timer_name=name)
+            for aggregate in timer.aggregates:
+                fields = {'name': name, **aggregate}
+                add('timer', sec.path, '', f"{name}: {aggregate.get('value')}",
+                    tm={'type': 'timer_agg', 'f': fields}, container=sec.path, timer_name=name)
+        for name, calls in sec.prints.items():
+            path = f'{sec.path}/{name}' if sec.path else name
+            secs[path] = 'MPI all-print' if name else 'Text print'
+            for call_index, call in enumerate(calls, 1):
+                occurrence = call_index - 1
+                for rank, output in call.ranks.items():
+                    label = f'Rank {rank}' if rank >= 0 else 'Rank unknown'
+                    values = output.json()
+                    if values:
+                        for value in values:
+                            add('json', path, label, json.dumps(value, ensure_ascii=False),
+                                j=value, o=occurrence, container=sec.path, print=name,
+                                call=call.call, comm=call.comm, rank=rank)
+                    else:
+                        for line in output.lines:
+                            add('text', path, label, line, o=occurrence)
+        if sec.path:
+            add('mark', sec.path, '', f'== end {sec.path} ==')
+    return {'recs': recs, 'secs': secs, 'warnings': run.check(),
+            'format': run.format, 'record_count': run.record_count, 'lossy': run.lossy}
 
 
 class App:
-    def __init__(self, path, follow, patterns=None):
+    def __init__(self, path, follow):
         self.path, self.follow, self.sig, self.ver = path, follow, None, 0
-        self.patterns = patterns
         self.data, self.lock = {'recs': [], 'secs': {}}, threading.Lock()
 
     def get(self):
         with self.lock:
             try:
                 st = os.stat(self.path)
-                sig = (st.st_mtime_ns, st.st_size)
+                files = [self.path, *glob.glob(glob.escape(self.path) + '.r[0-9]*')]
+                sig = tuple((name, os.stat(name).st_mtime_ns, os.stat(name).st_size)
+                            for name in sorted(files))
             except OSError:
                 sig = ('missing',)
             if sig != self.sig and (self.follow or self.sig is None):
                 self.sig = sig
                 try:
-                    with open(self.path, encoding='utf-8', errors='replace') as f:
-                        text = f.read()
+                    run = ccutils_run.load(self.path)
                 except OSError:
-                    text = ''
-                self.data, self.ver = parse(text, self.patterns), self.ver + 1
+                    run = ccutils_run.loads('')
+                self.data, self.ver = view_run(run), self.ver + 1
             return self.ver, self.data
 
 
@@ -99,7 +138,8 @@ def handler(app):
                 if parse_qs(u.query).get('v', [''])[0] == str(ver):
                     out = {'ver': ver, 'same': True}
                 else:
-                    out = {'ver': ver, 'same': False, 'follow': app.follow, **data}
+                    out = {'ver': ver, 'same': False, 'follow': app.follow,
+                           'source': os.path.abspath(app.path), **data}
                 self.send(json.dumps(out, ensure_ascii=False, separators=(',', ':'),
                                      allow_nan=False).encode(), 'application/json')
             else:
@@ -114,14 +154,10 @@ def main():
     ap.add_argument('--host', default='127.0.0.1')
     ap.add_argument('--no-follow', action='store_true', help='parse once, do not watch for changes')
     ap.add_argument('--no-browser', action='store_true')
-    ap.add_argument('--lenient', action='store_true', help='treat any ===/---/### banner as a nested section')
-    ap.add_argument('--patterns', metavar='JSON', help='JSON file overriding ccutils_parser marker regexes')
     a = ap.parse_args()
     if not os.path.exists(a.file):
         print(f'warning: {a.file} does not exist yet; waiting for it to appear', file=sys.stderr)
-    pats = (ccutils_parser.ParserPatterns.from_json_file(a.patterns) if a.patterns
-            else ccutils_parser.ParserPatterns.lenient() if a.lenient else None)
-    app = App(a.file, not a.no_follow, pats)
+    app = App(a.file, not a.no_follow)
     for port in range(a.port, a.port + 20):
         try:
             srv = ThreadingHTTPServer((a.host, port), handler(app))
@@ -152,6 +188,7 @@ body{display:grid;grid-template:48px 1fr/250px 1fr;background:var(--bg);color:va
 header{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--pn);border-bottom:1px solid var(--bd)}
 header h1{font-size:15px;margin:0;font-weight:650}
 #q{flex:1;max-width:420px;padding:6px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg)}
+.clear{padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:none;color:var(--fg);cursor:pointer}.clear:hover{background:var(--bg)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--mu);display:inline-block}.dot.on{background:var(--ok)}
 .mu{color:var(--mu)}label{display:flex;gap:5px;align-items:center;cursor:pointer}
 aside{overflow:auto;padding:10px;border-right:1px solid var(--bd);background:var(--pn)}
@@ -199,8 +236,8 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--ac2)}tr.mu td{color:var(-
 .tb{position:relative;height:12px;min-width:180px;background:var(--bg);border-radius:3px}.tb i{position:absolute;left:0;top:0;bottom:0;background:var(--ac);opacity:.55;border-radius:3px}.tb u{position:absolute;top:5px;height:2px;background:var(--fg)}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);padding:6px 14px;background:var(--fg);color:var(--bg);border-radius:6px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}#toast.show{opacity:1}
 </style></head><body>
-<header><h1>__FILE__</h1><input id="q" type="search" placeholder="Filter lines (text, key, value)">
-<span class="mu" id="stat"></span><span style="flex:1"></span>
+<header><h1>__FILE__</h1><input id="q" type="search" aria-label="Search records" placeholder="Search text, JSON fields, and timers">
+<button class="clear" id="clear" title="Clear search and rank or section filters">Clear filters</button><span class="mu" id="stat"></span><span style="flex:1"></span>
 <label><input type="checkbox" id="fol" checked> Follow</label><span class="dot" id="dot" title="connection"></span></header>
 <aside><div id="secs"></div><div id="blks"></div></aside>
 <section><nav id="tabs"></nav><div id="main"></div></section>
@@ -212,20 +249,20 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const fmt=x=>typeof x!=='number'?String(x):(x!==0&&(Math.abs(x)>=1e6||Math.abs(x)<1e-3))?x.toExponential(2):String(+x.toFixed(4));
 const nat=(a,b)=>a.localeCompare(b,undefined,{numeric:true});
 const C=['#2b6cb0','#d9534f','#2f9e5e','#e0a100','#8e5bd0','#14a3a3','#e07a3f','#7a8599'];
-const S={recs:[],secs:{},ver:-1,sec:'',blk:'',q:'',tab:'overview',follow:true,more:30,split:false,ts:{k:'',d:-1},jg:'',jd:1,jmode:'tree',jdiff:true,warn:[]};
+const S={recs:[],secs:{},ver:-1,sec:'',blk:'',q:'',tab:'overview',follow:true,more:30,split:false,ts:{k:'',d:-1},jg:'',jd:1,jmode:'tree',jdiff:true,warn:[],format:'',recordCount:0,lossy:[]};
 const OWNQ=['metrics','charts','json'];
 const inSec=r=>!S.sec||r.s===S.sec||r.s.startsWith(S.sec+'/');
-function vis(){const q=OWNQ.includes(S.tab)?'':S.q.toLowerCase();return S.recs.filter(r=>inSec(r)&&(!S.blk||r.b===S.blk)&&(!q||r.t.toLowerCase().includes(q)))}
+function vis(){const q=OWNQ.includes(S.tab)?'':S.q.toLowerCase();return S.recs.filter(r=>{if(!inSec(r)||S.blk&&r.b!==S.blk)return false;if(!q)return true;const searchable=[r.t,r.j===undefined?'':JSON.stringify(r.j),r.tm===undefined?'':JSON.stringify(r.tm)].join(' ').toLowerCase();return searchable.includes(q)})}
 
 function side(){
  const cnt=new Map();
  for(const r of S.recs){let p='';for(const n of(r.s?r.s.split('/'):[])){p=p?p+'/'+n:n;cnt.set(p,(cnt.get(p)||0)+1)}}
  const box=$('#secs');
- box.replaceChildren(h('div',{class:'item'+(S.sec?'':' on'),onclick:()=>{S.sec='';S.blk='';render()}},'All lines',h('span',{class:'n'},S.recs.length)));
+ box.replaceChildren(h('div',{class:'cap'},'Sections'),h('div',{class:'item'+(S.sec?'':' on'),onclick:()=>{S.sec='';S.blk='';render()}},'All sections',h('span',{class:'n'},S.recs.length)));
  for(const[p,n]of cnt){const d=p.split('/').length-1;
   box.append(h('div',{class:'item'+(S.sec===p?' on':''),style:`padding-left:${10+d*14}px`,title:S.secs[p]||p,onclick:()=>{S.sec=S.sec===p?'':p;S.blk='';render()}},p.split('/').pop(),h('span',{class:'n'},n)))}
  const bs=[...new Set(S.recs.filter(inSec).map(r=>r.b).filter(Boolean))].sort(nat);
- $('#blks').replaceChildren(...(bs.length?[h('div',{class:'cap'},'Blocks')]:[]),...bs.map(b=>h('button',{class:'chip'+(S.blk===b?' on':''),onclick:()=>{S.blk=S.blk===b?'':b;render()}},b)));
+ $('#blks').replaceChildren(...(bs.length?[h('div',{class:'cap'},'Ranks and data')]:[]),...bs.map(b=>h('button',{class:'chip'+(S.blk===b?' on':''),title:'Filter to '+b,onclick:()=>{S.blk=S.blk===b?'':b;render()}},b)));
 }
 const toast=m=>{const t=$('#toast');t.textContent=m;t.className='show';clearTimeout(toast.t);toast.t=setTimeout(()=>t.className='',1500)};
 const copy=(s,m)=>navigator.clipboard.writeText(s).then(()=>toast(m||'Copied'),()=>toast('Copy failed'));
@@ -272,11 +309,12 @@ function timers(rs,top){
 }
 function overview(rs){
  const js=rs.filter(r=>r.j!==undefined),tm=rs.filter(r=>r.tm);
- const st=[['Lines',rs.length],['Sections',new Set(rs.map(r=>r.s).filter(Boolean)).size],['Blocks',new Set(rs.map(r=>r.b).filter(Boolean)).size],['JSON records',js.length],['Metrics',mgroups(rs).length],['Timers',tm.length]];
+ const st=[['Rows',rs.length],['Sections',new Set(rs.map(r=>r.s).filter(Boolean)).size],['Blocks',new Set(rs.map(r=>r.b).filter(Boolean)).size],['JSON',js.length],['Timers',tm.length],['Format',S.format||'?']];
  const by=new Map();for(const r of rs){const e=by.get(r.s)||{n:0,j:0,t:0};e.n++;if(r.j!==undefined)e.j++;if(r.tm)e.t++;by.set(r.s,e)}
  let gj=js.filter(r=>!r.b);if(!gj.length){const seen=new Set();gj=js.filter(r=>!seen.has(gk(r))&&seen.add(gk(r)))}
  const out=rs.filter(r=>!r.s&&r.k==='text'&&r.t.trim()),os=out.length>14?[...out.slice(0,10),...out.slice(-4)]:out;
  return h('div',{},h('div',{class:'stats'},st.map(([a,b])=>h('div',{class:'stat'},h('b',{},b),a))),
+  S.recordCount?h('div',{class:'note'},`${S.recordCount} source records`+(S.lossy.length?' · '+S.lossy.join('; '):'')):null,
   (S.warn||[]).length?h('div',{class:'card',style:'margin-bottom:12px'},h('h4',{},'Parser notes'),S.warn.slice(0,15).map(w=>h('div',{class:'mu'},w))):null,
   tm.length?[h('h3',{},'Slowest timers'),h('div',{class:'card'},timers(rs,6))]:null,
   gj.length?[h('h3',{},'Key values from JSON'),h('div',{class:'cards'},gj.slice(0,12).map(r=>h('div',{class:'card'},h('h4',{},(r.s||'top level')+(r.b?' \u00b7 '+r.b:'')+' \u00b7 line '+(r.i+1)),chips(facts(r.j)))))]:null,
@@ -368,6 +406,43 @@ function json(rs){
  const trees=recs.slice(0,200).map(r=>jt(r.j,(r.b||'JSON')+' \u00b7 line '+(r.i+1),'',0,q)).filter(Boolean);
  return h('div',{},bar,trees.length?trees:empty('No keys or values match "'+S.q+'".'))
 }
+function snippets(rs){
+ const q=s=>JSON.stringify(String(s)), source=q(S.source||'run.jsonl');
+ const item=rs.find(r=>r.container!==undefined)||rs[0]||{};
+ const section=item.container!==undefined?item.container:(S.sec&&S.secs[S.sec]==='MPI all-print'?S.sec.split('/').slice(0,-1).join('/'):S.sec);
+ const secExprFor=path=>path?`run[${q(path)}]`:'run.outside';
+ const secExpr=secExprFor(section);
+ const cards=[['Load a run',`from ccutils import load\n\nrun = load(${source})\n`],
+  ['Read section values',`section = ${secExpr}\n\n# Global JSON values\nvalues = section.data\n\n# Rank-local JSON values: {rank: {key: value}}\nrank_values = section.rank_data\n`]];
+ const printRow=rs.find(r=>r.print);
+ if(printRow){
+  const printName=printRow.print, call=printRow.call, comm=printRow.comm, rank=printRow.rank;
+  const printSecExpr=secExprFor(printRow.container);
+  let code=`section = ${printSecExpr}\ncalls = section.prints.calls(${q(printName)})\n`;
+  const matchCall=(call!==null&&call!==undefined?`c.call == ${Number(call)}`:'True')+
+   (comm?` and c.comm == ${q(comm)}`:'');
+  if(call!==null&&call!==undefined||comm)code+=`call = next(c for c in calls if ${matchCall})\n`;
+  else code+='call = calls[0]\n';
+  if(rank!==null&&rank!==undefined){
+   code+=`rank_json = call.ranks[${Number(rank)}].json()\n`;
+   code+='for value in rank_json:\n    # Process one JSON value from this rank\n    print(value)\n';
+  }else{
+   code+='for rank, output in call.ranks.items():\n    for value in output.json():\n        # Process one JSON value from each rank\n        print(rank, value)\n';
+  }
+  cards.push(['Parse selected MPI JSON print',code]);
+  const callSelect=(call!==null&&call!==undefined||comm)?`next(c for c in calls if ${matchCall})`:'calls[0]';
+  cards.push(['Process every rank in this print',`section = ${printSecExpr}\ncalls = section.prints.calls(${q(printName)})\ncall = ${callSelect}\n\nfor rank, output in call.ranks.items():\n    for value in output.json():\n        # Add application-specific extraction here\n        print(rank, value)\n`]);
+ }
+ const timer=rs.find(r=>r.tm&&r.tm.f&&r.tm.f.name);
+ if(timer){
+  const name=timer.tm.f.name;
+  cards.push(['Inspect selected timer',`section = ${secExprFor(timer.container)}\ntimer = section.timers[${q(name)}]\n\nsummary = timer.last\nprint(summary.avg_ms, summary.min_ms, summary.max_ms)\nprint(timer.by_rank())\nprint(timer.samples)\nprint(timer.aggregates)\n`]);
+ }
+ return h('div',{},h('div',{class:'note'},'Copy a starting point, then add your own field extraction. Snippets use the public ccutils Run API.'),
+  h('div',{class:'cards'},cards.map(([title,code])=>h('div',{class:'card'},h('h4',{},title),
+   h('pre',{class:'raw',style:'white-space:pre-wrap;overflow:auto'},code),
+   h('button',{class:'chip',onclick:()=>copy(code,'Copied Python snippet')},'Copy Python')))));
+}
 const hl=(t,q)=>{let s=esc(t).replace(/([A-Za-z_](?:[\w.\-\/]|&gt;)*)=([^\s,;]+)/g,'<span class="k">$1</span>=<span class="vv">$2</span>');
  if(q)s=s.replace(new RegExp('(?![^<]*>)('+esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');return s};
 function raw(rs){
@@ -375,22 +450,25 @@ function raw(rs){
  return h('div',{class:'raw'},rs.length>cap?h('div',{class:'note'},`Showing last ${cap} of ${rs.length} lines. Narrow with the filters.`):null,
   sl.map(r=>h('div',{class:'ln '+r.k},h('span',{class:'no'},r.i+1),h('span',{html:hl(r.t,S.q)}))))
 }
-const TABS={overview,timers,metrics,charts,json,raw};
+const TABS={overview,timers,metrics,charts,json,snippets,raw};
+const TAB_LABELS={overview:'Overview',timers:'Timers',metrics:'Metrics',charts:'Charts',json:'JSON',snippets:'Python snippets',raw:'Log lines'};
 function render(){
  const m=$('#main'),st=m.scrollTop,bot=m.scrollHeight-st-m.clientHeight<80;
  side();
- const rs=vis();$('#q').placeholder=({metrics:'Filter metrics by name',charts:'Filter metrics by name',json:'Search keys and values in JSON'})[S.tab]||'Filter lines (text, key, value)';$('#stat').textContent=`${rs.length} / ${S.recs.length} lines`;
- $('#tabs').replaceChildren(...Object.keys(TABS).map(t=>h('button',{class:'tab'+(S.tab===t?' on':''),onclick:()=>{S.tab=t;render()}},t[0].toUpperCase()+t.slice(1))));
+ const rs=vis();$('#q').placeholder=({metrics:'Filter metrics by name',charts:'Filter metrics by name',json:'Search JSON keys and values',snippets:'Find records for a snippet'})[S.tab]||'Search text, JSON fields, and timers';
+ const active=!!(S.sec||S.blk||S.q);$('#clear').hidden=!active;$('#stat').textContent=`${rs.length} of ${S.recs.length} records`;
+ $('#tabs').replaceChildren(...Object.keys(TABS).map(t=>h('button',{class:'tab'+(S.tab===t?' on':''),'aria-label':TAB_LABELS[t],title:({snippets:'Copy ready-to-edit Python examples using the ccutils parser',raw:'Browse source log lines'})[t]||'',onclick:()=>{S.tab=t;render()}},TAB_LABELS[t])));
  m.replaceChildren(TABS[S.tab](rs));
  m.scrollTop=(S.tab==='raw'&&S.follow&&bot)?m.scrollHeight:st;
 }
 async function poll(){
  try{if(S.follow||S.ver<0){const d=await(await fetch('/api/data?v='+S.ver)).json();
-   if(!d.same){S.recs=d.recs;S.secs=d.secs;S.warn=d.warnings||[];S.ver=d.ver;if(d.follow===false){S.follow=false;$('#fol').checked=false;$('#fol').disabled=true}render()}}
+   if(!d.same){S.recs=d.recs;S.secs=d.secs;S.warn=d.warnings||[];S.source=d.source||'';S.format=d.format||'';S.recordCount=d.record_count||0;S.lossy=d.lossy||[];S.ver=d.ver;if(d.follow===false){S.follow=false;$('#fol').checked=false;$('#fol').disabled=true}render()}}
   $('#dot').className='dot on'}catch(e){$('#dot').className='dot'}
  setTimeout(poll,1000)
 }
 let tm;$('#q').addEventListener('input',e=>{clearTimeout(tm);tm=setTimeout(()=>{S.q=e.target.value.trim();render()},150)});
+$('#clear').addEventListener('click',()=>{S.sec='';S.blk='';S.q='';$('#q').value='';render()});
 $('#fol').addEventListener('change',e=>{S.follow=e.target.checked;render()});
 render();poll();
 </script></body></html>

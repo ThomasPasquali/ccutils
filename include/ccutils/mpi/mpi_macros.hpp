@@ -357,7 +357,6 @@ class MpiSection {
     SectionRef ref = section(name);
     CCUTILS_MPI_ALL_PRINT_IMPL(MPI_COMM_WORLD, print_name,
       machine::flush_deferred_records();
-      machine::data_object(ref.json(), machine::Scope::Rank);
       if (!ref.json().empty()) fprintf(fp, "%s\n", CCUTILS_JSON_DUMP(ref.json()).c_str()));
     ref.json().clear();
     if (mpi_rank() == 0 && !ref.global_json().empty()) {

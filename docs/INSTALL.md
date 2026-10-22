@@ -44,7 +44,10 @@ package and its compatibility modules in Python's site-packages directory. The i
 `ccutils-visualize`; source the shell configuration it updates to add those commands to
 `PATH` and the Python modules to `PYTHONPATH`.
 
-Run the visualization command as `ccutils-visualize my_output.log`.
+Run the visualization command as `ccutils-visualize my_output.log`. It reads the same
+machine, inline, human, and legacy formats as `ccutils.load`, follows rank sidecars, and
+includes a **Snippets** tab with copyable Python examples based on the selected section,
+MPI JSON print, or timer.
 
 ## CMake consumer
 

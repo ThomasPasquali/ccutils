@@ -245,7 +245,7 @@ inline void emit_run_start() {
   record.emit_with_seq(seq);
 }
 
-/* ---- helpers called from the macros; all are no-ops without a machine sink ---- */
+/* ---- helpers called from the macros; records go to machine and/or human sinks ---- */
 
 inline void emit_section_start(const char* title) {
   if (!machine_enabled()) return;
@@ -286,21 +286,20 @@ inline void section_end_local(const char* name, bool ok = false) {
 }
 
 #ifndef CCUTILS_NO_JSON
-/* One "data" record per top-level key of a JSON object. */
+/* One record per JSON object avoids repeating the record envelope per key. */
 inline void data_object(const nlohmann::json& object) {
   if (!machine_enabled() || !object.is_object()) return;
-  for (nlohmann::json::const_iterator it = object.begin(); it != object.end(); ++it) {
-    Record("data", Scope::Global)
-        .str("key", it.key())
-        .raw("value", it.value().dump(-1, ' ', false, nlohmann::json::error_handler_t::replace))
-        .emit();
-  }
+  if (object.empty()) return;
+  Record("data_batch", Scope::Global)
+      .raw("values", object.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace))
+      .emit();
 }
 inline void data_object(const nlohmann::json& object, Scope scope) {
   if (!machine_enabled() || !object.is_object()) return;
-  for (nlohmann::json::const_iterator it = object.begin(); it != object.end(); ++it)
-    Record("data", scope).str("key", it.key())
-        .raw("value", it.value().dump(-1, ' ', false, nlohmann::json::error_handler_t::replace)).emit();
+  if (object.empty()) return;
+  Record("data_batch", scope)
+      .raw("values", object.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace))
+      .emit();
 }
 #endif
 
@@ -368,7 +367,28 @@ inline void text_records(const char* print, const std::string& text, Scope scope
   const unsigned long long call = next_text_call(scope);
   if (!machine_enabled()) return;
   const bool trailing = !text.empty() && text[text.size()-1] == '\n';
-  const bool utf8 = valid_utf8(text);
+#ifndef CCUTILS_NO_JSON
+  /* MPI JSON print helpers write JSON through the text capture stream. Keep
+   * their payload structured so downstream sinks never need to parse escaped
+   * JSON out of a `text` field. */
+  if (scope == Scope::Rank && print &&
+      (std::string(print) == "ccutils_rank_json" ||
+       std::string(print) == "ccutils_subsection_json")) {
+    try {
+      const nlohmann::json value = nlohmann::json::parse(text);
+      Record record("json", scope);
+      record.str("print", print);
+      if (comm && *comm) record.str("comm", comm);
+      record.integer("call", static_cast<long long>(call)).integer("part", 0)
+          .boolean("last", true).boolean("trailing_newline", trailing)
+          .raw("value", value.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace))
+          .emit();
+      return;
+    } catch (...) {
+      /* Malformed/non-JSON output continues through the ordinary text path. */
+    }
+  }
+#endif
   std::vector<std::string> chunks;
   std::size_t begin = 0, lines = 0;
   for (std::size_t i = 0; i < text.size(); ++i) {
@@ -383,21 +403,12 @@ inline void text_records(const char* print, const std::string& text, Scope scope
     if (comm && *comm) record.str("comm", comm);
     record.integer("call", static_cast<long long>(call)).integer("part", static_cast<long long>(p))
       .boolean("last", p + 1 == chunks.size()).boolean("trailing_newline", trailing);
-    if (utf8) {
-      std::string values = "["; std::size_t pos = 0; bool first = true;
-      while (pos < chunk.size()) {
-        std::size_t end = chunk.find('\n', pos);
-        if (end == std::string::npos) end = chunk.size();
-        std::string line = chunk.substr(pos, end-pos);
-        if (!first) values += ',';
-        first = false;
-        values += quote(line);
-        pos = end == chunk.size() ? end : end + 1;
-      }
-      record.raw("lines", values + "]");
-      /* Preserve exact chunk boundaries across arbitrary byte splits. */
-      record.str("chunk", base64(chunk));
-    } else record.str("encoding", "base64").str("data", base64(chunk));
+    /* A byte-count chunk boundary can split a multibyte UTF-8 character even
+     * when the complete print is valid UTF-8. Encode such chunks as base64 so
+     * every machine record remains valid JSON and the MPI gather can rebuild
+     * the original payload before recognizing structured JSON. */
+    if (valid_utf8(chunk)) record.str("text", chunk);
+    else record.str("encoding", "base64").str("data", base64(chunk));
     record.emit();
   }
 }

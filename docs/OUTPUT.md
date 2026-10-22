@@ -2,7 +2,8 @@
 
 Everything ccutils prints for humans (sections, JSON blocks, timers, MPI all-print,
 `*_ONCE` prints, buffered prints, MPI timer reports) goes through one output sink.
-By default that sink is `stdout`, and the bytes are identical to previous versions.
+Human logs also carry `@ccutils` structured records so the parser can recover all data
+available in machine output.
 
 | Variable | Values | Default |
 |----------|--------|---------|
@@ -37,8 +38,8 @@ ccutils::init(cfg);               // overrides the environment; emits run_start 
 ```
 
 `ccutils::init(Config)` is optional and non-collective. It configures the sinks and
-immediately emits `run_start` when machine output is enabled. `ccutils::configure()`
-changes configuration without emitting a record; lazy machine output still starts
+immediately emits `run_start` when either output sink is enabled. `ccutils::configure()`
+changes configuration without emitting a record; lazy structured output still starts
 with `run_start` on the first record.
 
 ## Which rank writes a file

@@ -63,6 +63,48 @@ Records written by a rank other than 0 go to a sidecar file `<file>.r<N>` (see O
 killed), lines that were lost (gaps in `seq`), invalid JSON lines, records of a newer schema.
 Unknown record types and fields are ignored, so newer logs still load.
 
+## Python functions
+
+```python
+ccutils.detect_format(text)                       # identify jsonl, inline, human-v2, or legacy
+ccutils.loads(text, format=None, name="<string>") # parse text; format is optional
+ccutils.load(path, format=None, sidecars=True)     # parse a file; merge MPI .r<N> files by default
+```
+
+`load` and `loads` return a `Run`; unsupported input raises `ccutils.FormatError`.
+`Run` provides:
+
+| Function | Result |
+| --- | --- |
+| `run[path]`, `path in run` | First section at a slash-separated path; membership check |
+| `run.all(path)`, `run.find(name)` | Repeated sections at a path; sections matching a name |
+| `run.sections()` | Iterate through all sections |
+| `run.tree(file=None)` | Return and print a tree; pass `file=False` to return without printing |
+| `run.check()` | List structural warnings |
+| `run.data_table()`, `run.timers_table()` | Lists of dictionaries for global/rank data and timer reports |
+| `run.data_df()`, `run.timers_df(level=None)` | Optional pandas DataFrames; timer `level` may be `"rank"` or `"comm"` |
+
+Each `Section` has `.data`, `.rank_data`, `.timers`, and `.prints` dictionaries.
+Use `section.per_rank(key)` to collect a rank-local value. A `Timer` exposes its
+latest summary (`.last`, `.avg_ms`, `.min_ms`, and related fields), all `.summaries`,
+`.samples`, `.aggregates`, `.by_rank()`, and `.per_rank(kind)` (requires pandas).
+For MPI print calls, use `section.prints.calls(name)`. `call.jsons` directly maps each
+rank to its first parsed JSON value; `call.json_values` maps ranks to lists when a rank
+prints multiple JSON values. Each `call.ranks[rank]` also provides `.text`, `.lines`, and
+`.json()`. `AllPrint.grep(pattern)` searches rank lines; `diff_ranks(left, right)`
+compares two ranks.
+
+```python
+jsons = run["graph_structure"].prints.calls("ccutils_rank_json")[0].jsons
+print(jsons[0])  # parsed JSON from rank 0
+```
+
+The compatibility API is available from `ccutils.ccutils_parser`: `parse(text, **options)`
+and `parse_file(path, **options)` return the older `Document`; `parse_timer_records(text)`
+reads standalone timer lines. `describe_structure(document)` returns metadata, and
+`pretty_print_structure(document, verbosity=1)` prints it. New code should use `load` or
+`loads` above.
+
 ## Human logs: what is different
 
 `run.lossy` says what a human log cannot give you. For the legacy format: timer values have

@@ -38,9 +38,11 @@ class TimerRecord:
     raw_line: str = ''
 
     def __getitem__(self, key: str) -> Any:
+        """Return a timer field by name."""
         return self.fields[key]
 
     def get(self, key: str, default=None) -> Any:
+        """Return a timer field, or `default` when it is absent."""
         return self.fields.get(key, default)
 
     def __getattr__(self, key: str) -> Any:
@@ -132,17 +134,21 @@ class ParserPatterns:
     rank_end: str = r'^\s*\[\[\s*END\s+Rank\s+(?P<rank>\d+)\s*\]\]\s*$'
 
     def __post_init__(self):
+        """Compile the configured marker patterns."""
         self._c = {f.name: re.compile(getattr(self, f.name)) for f in fields(self)}
 
     def match(self, kind: str, text: str):
+        """Match one line against a named marker pattern."""
         return self._c[kind].match(text)
 
     @classmethod
     def from_dict(cls, d: Dict[str, str]) -> 'ParserPatterns':
+        """Build marker patterns from a mapping of pattern names to regexes."""
         return cls(**d)
 
     @classmethod
     def from_json_file(cls, path: Union[str, Path]) -> 'ParserPatterns':
+        """Load marker patterns from a JSON file."""
         return cls.from_dict(json.loads(Path(path).read_text(encoding='utf-8')))
 
     @classmethod
@@ -176,6 +182,7 @@ class RankOutput:
 
     @property
     def text(self) -> str:
+        """Return this rank's output text."""
         return '\n'.join(l.text for l in self.lines)
 
     def json(self) -> List[Any]:
@@ -194,28 +201,43 @@ class MPIAllPrint:
 
     @property
     def raw_text(self) -> str:
+        """Return all output lines in the MPI print block."""
         return '\n'.join(l.text for l in self.lines)
 
     @property
     def rank_outputs(self) -> Dict[int, str]:          # backwards compatible view
+        """Map each rank to its output text."""
         return {r: o.text for r, o in self.ranks.items()}
 
     def get_rank_output(self, rank: int) -> Optional[str]:
+        """Return one rank's output text, or None if that rank is absent."""
         return self.ranks[rank].text if rank in self.ranks else None
 
     def get_all_ranks(self) -> List[int]:
+        """Return the rank IDs present in this print block."""
         return sorted(self.ranks)
 
     def per_rank_json(self) -> Dict[int, Any]:
         """First JSON value per rank (typical for 'print JSON on every rank')."""
         return {r: o.json()[0] for r, o in sorted(self.ranks.items()) if o.json()}
 
+    @property
+    def jsons(self) -> Dict[int, Any]:
+        """First JSON value per rank; convenient mapping for MPI JSON prints."""
+        return self.per_rank_json()
+
     def per_rank_json_values(self) -> Dict[int, List[Any]]:
         """All JSON values emitted by each rank in this MPI print block."""
         return {r: values for r, o in sorted(self.ranks.items())
                 if (values := o.json())}
 
+    @property
+    def json_values(self) -> Dict[int, List[Any]]:
+        """All JSON values emitted by each rank in this MPI print block."""
+        return self.per_rank_json_values()
+
     def to_dict(self) -> dict:
+        """Convert this block and its rank outputs to plain Python data."""
         return {
             'name': self.name,
             'lines': [self.start_line, self.end_line],
@@ -243,16 +265,20 @@ class Section:
 
     @property
     def raw_text(self) -> str:
+        """Return ordinary text belonging directly to this section."""
         return '\n'.join(l.text for l in self.lines).strip()
 
     @property
     def json_data(self) -> Optional[Any]:
+        """Return the first JSON block in this section, if present."""
         return next(iter(self.json_blocks.values()), None)
 
     def get_global_json(self) -> Optional[Any]:
+        """Return the first global JSON block in this section, if present."""
         return self.json_data
 
     def get_mpi_print(self, name: str) -> Optional[MPIAllPrint]:
+        """Return this section's MPI print block named `name`, if present."""
         return self.mpi_all_prints.get(name)
 
     def get_child(self, name: str) -> Optional['Section']:
@@ -260,14 +286,17 @@ class Section:
         return next((child for child in self.children if child.name == name), None)
 
     def list_mpi_prints(self) -> List[str]:
+        """List the names of MPI print blocks in this section."""
         return list(self.mpi_all_prints)
 
     def walk(self) -> Iterator['Section']:
+        """Iterate over this section and its descendants, depth first."""
         yield self
         for c in self.children:
             yield from c.walk()
 
     def to_dict(self) -> dict:
+        """Convert the section, its children, and parsed blocks to plain data."""
         return {'name': self.name, 'title': self.title, 'lines': [self.start_line, self.end_line],
                 'complete': self.complete, 'text': self.raw_text, 'json': self.json_blocks,
                 'mpi': {n: m.to_dict() for n, m in self.mpi_all_prints.items()},
@@ -286,15 +315,19 @@ class Document:
     marker_count: int = 0
 
     def __getitem__(self, name: str) -> Section:
+        """Return a top-level section by name."""
         return self.sections[name]
 
     def __contains__(self, name: str) -> bool:
+        """Return whether a top-level section with `name` exists."""
         return name in self.sections
 
     def __iter__(self):
+        """Iterate over top-level section names."""
         return iter(self.sections)
 
     def get(self, name: str, default=None):
+        """Return a top-level section, or `default` when absent."""
         return self.sections.get(name, default)
 
     @property
@@ -307,9 +340,11 @@ class Document:
         return self.mpi_all_prints.get(name)
 
     def list_mpi_prints(self) -> List[str]:
+        """List names of MPI print blocks outside sections."""
         return list(self.mpi_all_prints)
 
     def all_sections(self) -> List[Section]:
+        """Return all sections, including nested subsections."""
         return [s for top in self.sections.values() for s in top.walk()]
 
     def find(self, name: str) -> List[Section]:
@@ -317,6 +352,7 @@ class Document:
         return [s for s in self.all_sections() if s.name == name]
 
     def to_dict(self) -> dict:
+        """Convert the parsed document to plain Python data."""
         return {'sections': {k: s.to_dict() for k, s in self.sections.items()},
                 'outside': '\n'.join(l.text for l in self.outside),
                 'json': self.json_blocks,
@@ -327,6 +363,7 @@ class Document:
                 'warnings': self.warnings}
 
     def to_json(self, **kw) -> str:
+        """Serialize `to_dict()` as JSON; keyword arguments go to `json.dumps`."""
         return json.dumps(self.to_dict(), **kw)
 
     def describe_structure(self) -> dict:
@@ -334,6 +371,7 @@ class Document:
         return describe_structure(self)
 
     def summary(self) -> str:
+        """Return a compact text summary of sections, prints, and warnings."""
         timer_label = 'timer record' if len(self.timer_records) == 1 else 'timer records'
         warning_label = 'warning' if len(self.warnings) == 1 else 'warnings'
         out = [f'{len(self.lines)} lines, {self.marker_count} markers, '
@@ -438,18 +476,22 @@ class MPIOutputParser:
 
     # -- backwards-compatible API (returns the top-level sections dict) --
     def parse_file(self, filepath: Union[str, Path]) -> Dict[str, Section]:
+        """Parse a file and return its top-level section mapping."""
         return self.parse_document_file(filepath).sections
 
     def parse_string(self, content: str) -> Dict[str, Section]:
+        """Parse text and return its top-level section mapping."""
         return self.parse_document(content).sections
 
     def parse_document_file(self, filepath: Union[str, Path]) -> Document:
+        """Parse a file and return the complete compatibility Document."""
         p = Path(filepath)
         if not p.exists():
             raise FileNotFoundError(f'File not found: {p}')
         return self.parse_document(p.read_text(encoding='utf-8', errors='replace'))
 
     def parse_document(self, content: str) -> Document:
+        """Parse text and return a Document with sections, prints, and timer records."""
         P, doc = self.patterns, Document()
         stack: List[Section] = []
         mpi: Optional[MPIAllPrint] = None
@@ -639,10 +681,12 @@ def parse(text: str, **kw) -> Document:
 
 
 def parse_file(path: Union[str, Path], **kw) -> Document:
+    """Parse a file into a compatibility Document; options go to MPIOutputParser."""
     return MPIOutputParser(**kw).parse_document_file(path)
 
 
 def describe_structure(document: Document) -> dict:
+    """Return section and field structure without including payload values."""
     """Return structural metadata for a parsed document, excluding its data.
 
     The description includes section nesting and titles, JSON block names,
@@ -786,6 +830,7 @@ def describe_structure(document: Document) -> dict:
 
 def pretty_print_structure(document: Document, file=None, width: int = 100,
                            verbosity: int = 1) -> None:
+    """Print the document structure at verbosity 0 (overview), 1 (fields), or 2 (details)."""
     """Print verbosity 0 (overview), 1 (fields), or 2 (metadata and locations)."""
     if verbosity not in (0, 1, 2):
         raise ValueError('verbosity must be 0, 1, or 2')
@@ -977,10 +1022,12 @@ def parse_ccutils(text: str, **kw) -> Document:
 
 
 def parse_ccutils_output_file(path: Path) -> Dict[str, Section]:     # old convenience API
+    """Parse a CCUTILS file and return only its top-level sections."""
     return parse_file(path).sections
 
 
 def parse_ccutils_output(text: str) -> Dict[str, Section]:           # old convenience API
+    """Parse CCUTILS text and return only its top-level sections."""
     return parse(str(text)).sections
 
 

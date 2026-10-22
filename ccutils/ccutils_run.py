@@ -29,7 +29,8 @@ except ImportError:  # script / flat use
     import ccutils_parser as _legacy
 
 SCHEMA_VERSION = 2
-KNOWN_TYPES = {"run_start", "section_start", "section_end", "data", "timer",
+KNOWN_TYPES = {"run_start", "section_start", "section_end", "data", "json",
+               "data_batch", "mpi_json_batch", "mpi_json_rows", "timer",
                "timer_sample", "timer_samples", "timer_agg", "text", "warning"}
 _RANK_JSON_BLOCKS = {"ccutils_rank_json", "ccutils_subsection_json"}
 
@@ -122,7 +123,11 @@ class Timer:
         return out
 
     def per_rank(self, kind: str = "sum"):
-        """Return per-rank values for a communicator report as a pandas Series."""
+        """Return per-rank timer values as a pandas Series.
+
+        `kind` is one of `n`, `avg`, `sd`, `min`, `max`, or `sum`.
+        Requires pandas.
+        """
         if kind not in ("n", "avg", "sd", "min", "max", "sum"):
             raise ValueError("kind must be n, avg, sd, min, max, or sum")
         ranked = self.by_rank()
@@ -139,6 +144,7 @@ class Timer:
 
 @dataclass
 class RankText:
+    """Text emitted by one rank in an all-ranks print call."""
     lines: List[str] = field(default_factory=list)
     trailing_newline: bool = True
     _parts: Dict[int, bytes] = field(default_factory=dict, repr=False)
@@ -173,12 +179,26 @@ class AllPrint:
     comm: Optional[str] = None
     ranks: Dict[int, RankText] = field(default_factory=dict)
 
+    @property
+    def jsons(self) -> Dict[int, Any]:
+        """First JSON value printed by each rank that emitted valid JSON."""
+        return {rank: values[0] for rank, output in sorted(self.ranks.items())
+                if (values := output.json())}
+
+    @property
+    def json_values(self) -> Dict[int, List[Any]]:
+        """All JSON values printed by each rank that emitted valid JSON."""
+        return {rank: values for rank, output in sorted(self.ranks.items())
+                if (values := output.json())}
+
     def grep(self, pattern: str, flags: int = 0) -> Dict[int, List[str]]:
+        """Return matching output lines grouped by rank; `pattern` is a regex."""
         rx = re.compile(pattern, flags)
         return {rank: [line for line in text.lines if rx.search(line)]
                 for rank, text in self.ranks.items()}
 
     def diff_ranks(self, left: int, right: int) -> str:
+        """Return a unified text diff between two ranks."""
         a = self.ranks.get(left, RankText()).lines
         b = self.ranks.get(right, RankText()).lines
         return "\n".join(difflib.unified_diff(a, b, fromfile=f"rank {left}",
@@ -187,10 +207,13 @@ class AllPrint:
 
 class PrintCalls(dict):
     def calls(self, name: str) -> List[AllPrint]:
+        """Return all calls of the named MPI print, in input order."""
         return list(self.get(name, []))
 
 
 class Section:
+    """Parsed section with global/rank data, timers, prints, and child sections."""
+
     def __init__(self, name: str, path: str, parent: Optional["Section"] = None):
         self.name = name
         self.path = path
@@ -207,9 +230,11 @@ class Section:
         self.prints: PrintCalls = PrintCalls()
 
     def child(self, name: str) -> Optional["Section"]:
+        """Return the direct child named `name`, or None."""
         return next((c for c in self.children if c.name == name), None)
 
     def __getitem__(self, path: str) -> "Section":
+        """Look up a descendant by slash-separated path relative to this section."""
         node: Section = self
         for part in path.split("/"):
             found = node.child(part)
@@ -220,6 +245,7 @@ class Section:
         return node
 
     def walk(self) -> Iterator["Section"]:
+        """Iterate over this section and all descendants, depth first."""
         yield self
         for c in self.children:
             yield from c.walk()
@@ -237,6 +263,7 @@ class Run:
     """The whole output of one program run."""
 
     def __init__(self, format: str = "jsonl", sources: Optional[List[str]] = None):
+        """Create an empty run model. Usually use `load()` or `loads()` instead."""
         self.format = format
         self.sources: List[str] = list(sources or [])
         self.warnings: List[str] = []
@@ -252,6 +279,7 @@ class Run:
 
     # ---- queries
     def __getitem__(self, path: str) -> Section:
+        """Return the first section at `path`; raise KeyError if absent."""
         found = self._by_path.get(path)
         if not found:
             close = difflib.get_close_matches(path, list(self._by_path), n=3)
@@ -260,18 +288,20 @@ class Run:
         return found[0]
 
     def __contains__(self, path: str) -> bool:
+        """Return whether a section exists at `path`."""
         return path in self._by_path
 
     def all(self, path: str) -> List[Section]:
-        """Every section with this path (a section re-opened in a loop appears several times)."""
+        """Return every section at `path`, including repeated sections."""
         return list(self._by_path.get(path, []))
 
     def sections(self) -> Iterator[Section]:
+        """Iterate over all sections in document order."""
         for root in self.roots:
             yield from root.walk()
 
     def find(self, name: str) -> List[Section]:
-        """Every section called `name`, at any depth."""
+        """Return all sections named `name`, at any depth."""
         return [s for s in self.sections() if s.name == name]
 
     # ---- tables
@@ -308,17 +338,22 @@ class Run:
         return rows
 
     def timers_df(self, level: Optional[str] = None):
+        """Return timer reports as a pandas DataFrame, optionally filtered by scope."""
         if level is not None and level not in ("comm", "rank"):
             raise ValueError("level must be 'comm' or 'rank'")
         rows = self.timers_table()
         return _dataframe(rows if level is None else [r for r in rows if r["scope"] == level])
 
     def data_df(self):
+        """Return global and rank-local data as a pandas DataFrame."""
         return _dataframe(self.data_table())
 
     # ---- inspection
     def tree(self, file=None) -> str:
-        """Text outline of what the run contains; printed unless `file` is False."""
+        """Return a text outline and print it to `file` (stdout by default).
+
+        Pass `file=False` to return the outline without printing.
+        """
         lines = [f"{', '.join(self.sources) or '<string>'}  "
                  f"({self.format}, {self.record_count} records, {len(self.warnings)} warnings)"]
 
@@ -354,7 +389,7 @@ class Run:
         return text
 
     def check(self) -> List[str]:
-        """Structural problems found while loading (truncated log, missing records, ...)."""
+        """Return warnings and structural problems found while parsing the run."""
         problems = list(self.warnings)
         for sec in self.sections():
             if sec.started and not sec.complete:
@@ -428,6 +463,70 @@ class Run:
                 sec.ok = rec.get("ok", True)
         elif kind == "data":
             self._add_data(self._target(path), rec)
+        elif kind == "data_batch":
+            self._add_data_batch(self._target(path), rec)
+        elif kind == "json":
+            trailing_newline = rec.get("trailing_newline", True)
+            text = json.dumps(rec.get("value"), ensure_ascii=False, separators=(",", ":"))
+            if trailing_newline:
+                text += "\n"
+            self._add_text(self._target(path), {
+                "print": rec.get("print"), "call": rec.get("call"),
+                "comm": rec.get("comm"), "rank": rec.get("rank"),
+                "part": 0, "last": True, "trailing_newline": trailing_newline,
+                "text": text,
+            })
+        elif kind in ("mpi_json_batch", "mpi_json_rows"):
+            schema = rec.get("schema") if kind == "mpi_json_batch" else None
+
+            def expand_json_schema(node, values):
+                if not isinstance(node, list) or len(node) != 2:
+                    raise ValueError("invalid schema node")
+                kind_name, body = node
+                if kind_name == "object" and isinstance(body, list):
+                    if not isinstance(values, list) or len(values) != len(body):
+                        raise ValueError("object row does not match its schema")
+                    result = {}
+                    for field, value in zip(body, values):
+                        if not isinstance(field, list) or len(field) != 2 or not isinstance(field[0], str):
+                            raise ValueError("invalid object field")
+                        result[field[0]] = expand_json_schema(field[1], value)
+                    return result
+                if kind_name == "array" and isinstance(values, list):
+                    return values if body is None else [expand_json_schema(body, item) for item in values]
+                if kind_name == "array_raw" and body is None and isinstance(values, list):
+                    return values
+                if kind_name == "value" and isinstance(body, str):
+                    return values
+                raise ValueError("unknown schema node")
+
+            for row in rec.get("rows", []):
+                if kind == "mpi_json_rows":
+                    obj = row.get("value")
+                    if "value" not in row:
+                        self._warn("mpi_json_rows row has no JSON value")
+                        continue
+                else:
+                    values = row.get("values", [])
+                    if not isinstance(values, list):
+                        self._warn("mpi_json_batch row values are not an array")
+                        continue
+                    try:
+                        obj = expand_json_schema(schema, values)
+                    except (TypeError, ValueError):
+                        self._warn("mpi_json_batch row does not match its schema")
+                        continue
+                trailing_newline = row.get("trailing_newline", rec.get("trailing_newline", True))
+                text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+                if trailing_newline:
+                    text += "\n"
+                self._add_text(self._target(path), {
+                    "print": row.get("print", rec.get("print")),
+                    "call": row.get("call", rec.get("call")),
+                    "comm": row.get("comm", rec.get("comm")), "rank": row.get("rank"),
+                    "part": 0, "last": True, "trailing_newline": trailing_newline,
+                    "text": text,
+                })
         elif kind == "timer":
             self._add_timer(self._target(path), rec, source)
         elif kind == "timer_sample":
@@ -456,6 +555,16 @@ class Run:
             sec.rank_data.setdefault(rec.get("rank"), {})[rec["key"]] = rec.get("value")
         else:
             sec.data[rec["key"]] = rec.get("value")
+
+    def _add_data_batch(self, sec: Section, rec: Dict[str, Any]) -> None:
+        values = rec.get("values")
+        if not isinstance(values, dict):
+            self._warn("data_batch record has no object in 'values'")
+            return
+        if rec.get("scope") == "rank":
+            sec.rank_data.setdefault(rec.get("rank"), {}).update(values)
+        else:
+            sec.data.update(values)
 
     @staticmethod
     def _timer(sec: Section, name: str) -> Timer:
@@ -487,10 +596,10 @@ class Run:
         text = block.ranks.setdefault(rank if rank is not None else -1, RankText())
         part = rec.get("part")
         if part is not None:
-            if "chunk" in rec:
-                payload = base64.b64decode(rec["chunk"])
-            elif rec.get("encoding") == "base64":
+            if rec.get("encoding") == "base64":
                 payload = base64.b64decode(rec.get("data", ""))
+            elif "text" in rec:
+                payload = str(rec.get("text", "")).encode("utf-8", "surrogateescape")
             else:
                 payload = "\n".join(rec.get("lines", [])).encode("utf-8", "surrogateescape")
                 if rec.get("lines") and not rec.get("last"):
@@ -569,7 +678,30 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
     call = 0
     timer_location = None
     timer_columns = None
+    json_schema = None
     seq = 0
+
+    def expand_human_json(template: Any, values: Any) -> Any:
+        if isinstance(template, dict):
+            if not isinstance(values, list) or len(values) != len(template):
+                raise ValueError("JSON object values do not match schema")
+            return {key: expand_human_json(shape, value)
+                    for (key, shape), value in zip(template.items(), values)}
+        if isinstance(template, list):
+            if len(template) == 1 and template[0] == "<values>":
+                if not isinstance(values, list):
+                    raise ValueError("raw JSON array values are not an array")
+                return values
+            if not template:
+                if not isinstance(values, list):
+                    raise ValueError("JSON array values are not an array")
+                return values
+            if len(template) != 1 or not isinstance(values, list):
+                raise ValueError("JSON array values do not match schema")
+            return [expand_human_json(template[0], value) for value in values]
+        if template in ("<string>", "<number>", "<boolean>") or template is None:
+            return values
+        return template
 
     def record(kind: str, **fields):
         nonlocal seq
@@ -595,9 +727,18 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
         if named:
             print_name = named.group(1) or "all-ranks"
             call += 1
+            json_schema = None
             continue
         if re.match(r"^-- end all-ranks:", line):
             print_name = None
+            json_schema = None
+            continue
+        schema_line = re.match(r"^schema:\s*(.+?)\s*$", line)
+        if schema_line and print_name:
+            try:
+                json_schema = json.loads(schema_line.group(1))
+            except ValueError:
+                json_schema = None
             continue
         timer = re.match(r"^timers \[([^]]+)\]  \((.*?)\)\s*$", line)
         if timer:
@@ -638,6 +779,16 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
         rank_line = re.match(r"^\[r(\d+)\] (.*)$", line)
         if rank_line:
             rank = int(rank_line.group(1))
+            if json_schema is not None:
+                try:
+                    compact = json.loads(rank_line.group(2))
+                    value = expand_human_json(json_schema, compact)
+                except (TypeError, ValueError):
+                    value = None
+                if value is not None:
+                    yield record("json", scope="rank", rank=rank, print=print_name,
+                                 call=call, value=value, trailing_newline=True)
+                    continue
             yield record("text", scope="rank", rank=rank, print=print_name,
                          call=call if print_name else None, part=0, last=True,
                          lines=[rank_line.group(2)], trailing_newline=True)
@@ -652,6 +803,7 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
 
 
 def detect_format(text: str) -> str:
+    """Identify `text` as jsonl, inline, human-v2, or legacy output."""
     """Detect JSONL, inline, human-v2, or legacy output."""
     seen = 0
     for line in text.splitlines():
@@ -752,15 +904,24 @@ def _legacy_records(text: str) -> Iterator[Dict[str, Any]]:
 # ------------------------------------------------------------------------ API
 
 def loads(text: str, format: Optional[str] = None, name: str = "<string>") -> Run:
-    """Parse JSONL, inline, human-v2, or legacy text (format auto-detected by default)."""
+    """Parse output text into a Run, detecting its format unless `format` is set.
+
+    Supported formats: `jsonl`, `inline`, `human-v2`, and `legacy`.
+    `name` labels the source in the returned model. Raises FormatError if unsupported.
+    """
     fmt = format or detect_format(text)
     if fmt not in ("jsonl", "inline", "human-v2", "legacy"):
         raise FormatError(f"unknown format {fmt!r}")
     run = Run(fmt, [name] if name else [])
     if fmt == "human-v2":
-        run.lossy.append("human-v2 log: timer values are limited to displayed precision")
-        for rec in _human_v2_records(text):
-            run.add_record(rec, name)
+        structured = _inline_lines(text)
+        if structured:
+            for rec in _jsonl_records(structured, run, name):
+                run.add_record(rec, name)
+        else:
+            run.lossy.append("human-v2 log: timer values are limited to displayed precision")
+            for rec in _human_v2_records(text):
+                run.add_record(rec, name)
     elif fmt == "legacy":
         run.lossy.append("legacy log: timer values have 6 decimals, and CPU timers printed "
                          "outside an all-print block carry no rank")
@@ -788,11 +949,15 @@ def loads(text: str, format: Optional[str] = None, name: str = "<string>") -> Ru
 
 
 def load(path: Union[str, Path], format: Optional[str] = None, sidecars: bool = True) -> Run:
-    """Parse a file. Sidecar files ``<path>.r<N>`` (output of other MPI ranks) are merged."""
+    """Parse a log file into a Run, merging MPI `<path>.r<N>` sidecars by default.
+
+    Set `sidecars=False` to read only `path`; `format` overrides auto-detection.
+    """
     path = Path(path)
     text = path.read_text(errors="replace")
     run = loads(text, format, str(path))
-    if sidecars and run.format in ("jsonl", "inline"):
+    embedded_human_records = run.format == "human-v2" and bool(_inline_lines(text))
+    if sidecars and (run.format in ("jsonl", "inline") or embedded_human_records):
         found = sorted(glob.glob(glob.escape(str(path)) + ".r[0-9]*"),
                        key=lambda p: int(re.search(r"\.r(\d+)$", p).group(1)))
         for side in found:
@@ -800,7 +965,10 @@ def load(path: Union[str, Path], format: Optional[str] = None, sidecars: bool = 
                 continue
             run.sources.append(side)
             side_text = Path(side).read_text(errors="replace")
-            lines = side_text.splitlines() if run.format == "jsonl" else _inline_lines(side_text)
+            if run.format == "jsonl":
+                lines = side_text.splitlines()
+            else:
+                lines = _inline_lines(side_text)
             for rec in _jsonl_records(lines, run, side):
                 run.add_record(rec, side)
     return run

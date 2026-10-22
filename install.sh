@@ -246,6 +246,7 @@ fi
 mkdir -p "$INSTALL_BIN"
 
 cd "$BUILD_SOURCE_DIR"
+# rm -rf build
 
 echo -e "${GREEN}[3] Configuring CMake...${RESET}"
 cmake -B build -S . \

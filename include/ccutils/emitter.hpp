@@ -495,6 +495,10 @@ inline void machine_write_line(const std::string& line) {
   } else {
     const std::string text = line + "\n";
     s.machine.write(text.data(), text.size(), rank);
+    if (s.human.kind() != SinkKind::None) {
+      const std::string mirror = "@ccutils " + line + "\n";
+      s.human.write(mirror.data(), mirror.size(), rank);
+    }
   }
 }
 
@@ -505,7 +509,13 @@ inline void machine_write_line_for_rank(const std::string& line, int rank) {
   if (s.machine.kind() == SinkKind::Inline) {
     const std::string inline_text = "@ccutils " + text;
     s.human.write(inline_text.data(), inline_text.size(), rank);
-  } else s.machine.write(text.data(), text.size(), rank);
+  } else {
+    s.machine.write(text.data(), text.size(), rank);
+    if (s.human.kind() != SinkKind::None) {
+      const std::string mirror = "@ccutils " + text;
+      s.human.write(mirror.data(), mirror.size(), rank);
+    }
+  }
 }
 
 inline void machine_capture_begin() {
@@ -520,7 +530,9 @@ inline std::vector<std::string> machine_capture_end() {
 inline bool machine_enabled() {
   std::unique_lock<std::mutex> lock;
   detail::State& s = detail::locked_state(lock);
-  return s.machine.kind() != SinkKind::None;
+  /* Human logs carry the same structured records as a side channel so their
+   * parsed data remains complete even when no separate machine sink is set. */
+  return s.machine.kind() != SinkKind::None || s.human.kind() != SinkKind::None;
 }
 
 inline bool human_enabled() {
