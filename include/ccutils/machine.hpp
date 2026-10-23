@@ -259,30 +259,17 @@ inline void section_start(const char* name, const char* title) {
 }
 
 inline void section_end(const char* name, bool emit_records = true, bool ok = true) {
-  const std::vector<ccutils::detail::ClosedSection> closed =
+  const std::shared_ptr<ccutils::detail::SectionData> closed =
       ccutils::detail::pop_section(name);
-  if (!emit_records || !machine_enabled() || closed.empty()) return;
-
-  const std::string& requested_name = closed.back().name;
-  for (std::size_t i = 0; i < closed.size(); ++i) {
-    const bool requested_end = (i + 1 == closed.size());
-    const bool section_ok = requested_end ? ok : false;
-    Record("section_end", Scope::Global, closed[i].path).boolean("ok", section_ok).emit();
-    if (!requested_end) {
-      const std::string message = "section '" + closed[i].name +
-          "' was closed when outer section '" + requested_name +
-          "' ended before its end macro";
-      Record("warning", Scope::Global, closed[i].path).str("message", message).emit();
-    }
-  }
+  if (emit_records && machine_enabled() && closed)
+    Record("section_end", Scope::Global, closed->path).boolean("ok", ok).emit();
 }
 
 /* Exception-safe local close used by MPI RAII destructors: never collective. */
 inline void section_end_local(const char* name, bool ok = false) {
-  const std::vector<ccutils::detail::ClosedSection> closed =
+  const std::shared_ptr<ccutils::detail::SectionData> closed =
       ccutils::detail::pop_section(name);
-  for (std::size_t i = 0; i < closed.size(); ++i)
-    Record("section_end", Scope::Rank, closed[i].path).boolean("ok", ok && i + 1 == closed.size()).emit();
+  if (closed) Record("section_end", Scope::Rank, closed->path).boolean("ok", ok).emit();
 }
 
 #ifndef CCUTILS_NO_JSON
@@ -368,12 +355,10 @@ inline void text_records(const char* print, const std::string& text, Scope scope
   if (!machine_enabled()) return;
   const bool trailing = !text.empty() && text[text.size()-1] == '\n';
 #ifndef CCUTILS_NO_JSON
-  /* MPI JSON print helpers write JSON through the text capture stream. Keep
-   * their payload structured so downstream sinks never need to parse escaped
-   * JSON out of a `text` field. */
-  if (scope == Scope::Rank && print &&
-      (std::string(print) == "ccutils_rank_json" ||
-       std::string(print) == "ccutils_subsection_json")) {
+  /* A named all-ranks print may be used for JSON without going through a
+   * dedicated JSON macro. Preserve any complete JSON payload as a JSON record;
+   * ordinary text (including mixed text and JSON) follows the text path below. */
+  if (scope == Scope::Rank && print) {
     try {
       const nlohmann::json value = nlohmann::json::parse(text);
       Record record("json", scope);

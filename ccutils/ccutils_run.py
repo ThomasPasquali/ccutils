@@ -32,7 +32,7 @@ SCHEMA_VERSION = 2
 KNOWN_TYPES = {"run_start", "section_start", "section_end", "data", "json",
                "data_batch", "mpi_json_batch", "mpi_json_rows", "timer",
                "timer_sample", "timer_samples", "timer_agg", "text", "warning"}
-_RANK_JSON_BLOCKS = {"ccutils_rank_json", "ccutils_subsection_json"}
+_RANK_JSON_BLOCKS = {"rank_data", "ccutils_rank_json", "ccutils_subsection_json"}
 
 
 class FormatError(ValueError):
@@ -228,6 +228,11 @@ class Section:
         self.rank_data: Dict[Optional[int], Dict[str, Any]] = {}
         self.timers: Dict[str, Timer] = {}
         self.prints: PrintCalls = PrintCalls()
+
+    @property
+    def global_data(self) -> Dict[str, Any]:
+        """Global JSON values (alias for ``data``)."""
+        return self.data
 
     def child(self, name: str) -> Optional["Section"]:
         """Return the direct child named `name`, or None."""
@@ -466,8 +471,11 @@ class Run:
         elif kind == "data_batch":
             self._add_data_batch(self._target(path), rec)
         elif kind == "json":
+            value = rec.get("value")
+            if self._add_rank_data_print(path, rec.get("print"), rec.get("rank"), value):
+                return
             trailing_newline = rec.get("trailing_newline", True)
-            text = json.dumps(rec.get("value"), ensure_ascii=False, separators=(",", ":"))
+            text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
             if trailing_newline:
                 text += "\n"
             self._add_text(self._target(path), {
@@ -516,6 +524,9 @@ class Run:
                     except (TypeError, ValueError):
                         self._warn("mpi_json_batch row does not match its schema")
                         continue
+                if self._add_rank_data_print(
+                        path, row.get("print", rec.get("print")), row.get("rank"), obj):
+                    continue
                 trailing_newline = row.get("trailing_newline", rec.get("trailing_newline", True))
                 text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
                 if trailing_newline:
@@ -555,6 +566,14 @@ class Run:
             sec.rank_data.setdefault(rec.get("rank"), {})[rec["key"]] = rec.get("value")
         else:
             sec.data[rec["key"]] = rec.get("value")
+
+    def _add_rank_data_print(self, path: Optional[str], print_name: Optional[str],
+                             rank: Optional[int], value: Any) -> bool:
+        """Normalize the internal section-close MPI JSON print into rank data."""
+        if print_name != "rank_data" or not isinstance(value, dict):
+            return False
+        self._target(path).rank_data.setdefault(rank, {}).update(value)
+        return True
 
     def _add_data_batch(self, sec: Section, rec: Dict[str, Any]) -> None:
         values = rec.get("values")
@@ -715,10 +734,12 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
         start = re.match(r"^== (.+?) :: (.*?) ==\s*$", line)
         end = re.match(r"^== end (.+?) ==\s*$", line)
         if start:
+            timer_location = timer_columns = None
             section = start.group(1)
             yield record("section_start", title=start.group(2))
             continue
         if end:
+            timer_location = timer_columns = None
             section = end.group(1)
             yield record("section_end", ok=True)
             section = end.group(1).rpartition("/")[0] or None
@@ -748,19 +769,20 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
         if timer_location is not None:
             cells = line.split()
             if not cells:
-                timer_location = None
-                timer_columns = None
+                # Timer rows are separated by blank lines; v2 prints the table
+                # header only once for consecutive reports at the same location.
                 continue
             if cells[0] == "name":
                 timer_columns = cells
                 continue
-            if timer_columns and len(cells) >= 7:
+            if timer_columns and len(cells) >= 7 and cells[1].isdigit():
                 try:
                     values = dict(zip(timer_columns, cells))
                     timer_name, n = values["name"], int(values["n"])
                     vals = [float(values[key]) for key in ("avg", "sd", "min", "max", "sum")]
-                except ValueError:
+                except (KeyError, ValueError):
                     timer_location = None
+                    timer_columns = None
                     continue
                 comm_match = re.match(r"comm (.*), (\d+) ranks", timer_location)
                 rank_match = re.match(r"rank (\d+)", timer_location)
@@ -772,10 +794,8 @@ def _human_v2_records(text: str) -> Iterator[Dict[str, Any]]:
                              unit="ms", clock="mpi_wtime" if comm_match else "steady",
                              n=n, avg=vals[0], sd=vals[1], min=vals[2], max=vals[3],
                              sum=vals[4], comm=comm)
-                timer_location = None
-                timer_columns = None
                 continue
-            timer_location = None
+            timer_location = timer_columns = None
         rank_line = re.match(r"^\[r(\d+)\] (.*)$", line)
         if rank_line:
             rank = int(rank_line.group(1))

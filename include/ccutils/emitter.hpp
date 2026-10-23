@@ -391,13 +391,20 @@ inline const char* format_name() {
 inline void human_printf(const char* fmt, ...) CCUTILS_PRINTF_FORMAT(1, 2);
 inline void human_write(const char* data, std::size_t size);
 inline bool human_v2() { return std::strcmp(format_name(), "v2") == 0; }
+inline std::string& human_v2_last_timer_location() {
+  static thread_local std::string location;
+  return location;
+}
+inline void human_v2_reset_timer_table() { human_v2_last_timer_location().clear(); }
 inline void human_section_start(const std::string& path, const std::string& title) {
+  human_v2_reset_timer_table();
   const std::string line = "== " + path + " :: " + title + " ==\n";
   human_write(line.data(), line.size());
 }
 inline void human_section_end(const std::string& path) {
   const std::string line = "== end " + path + " ==\n";
   human_write(line.data(), line.size());
+  human_v2_reset_timer_table();
 }
 inline void human_v2_text_block(const std::string& name, int rank, const std::string& bytes) {
   std::size_t begin = 0;
@@ -421,7 +428,10 @@ inline void human_v2_timer(const char* title, const char* name, std::size_t n,
                   known_world_rank() < 0 ? 0 : known_world_rank());
     location = default_location;
   }
-  human_printf("timers [ms]  (%s)\n  name   n     avg     sd     min     max     sum\n", location);
+  if (human_v2_last_timer_location() != location) {
+    human_printf("timers [ms]  (%s)\n  name   n     avg     sd     min     max     sum\n", location);
+    human_v2_last_timer_location() = location;
+  }
   human_printf("  %s   %zu  %.*f  %.*f  %.*f  %.*f  %.*f\n\n", name, n,
                precision, avg, precision, sd, precision, min, precision, max, precision, sum);
   (void)title;

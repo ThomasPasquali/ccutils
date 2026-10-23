@@ -199,7 +199,7 @@ inline void all_print(MPI_Comm comm, const char* print_name,
       });
     bool compact_human_json = false;
 #ifndef CCUTILS_NO_JSON
-    if (ccutils::human_enabled() && size > 1) {
+    if (ccutils::human_enabled()) {
       typedef nlohmann::json Json;
       std::vector<Json> values(static_cast<std::size_t>(size));
       Json schema;

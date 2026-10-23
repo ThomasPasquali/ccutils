@@ -1,87 +1,49 @@
-# Using ccutils across files and functions
+# Sections across files
 
-Sections, timers and JSON objects are looked up **by name**, so a function in another
-file can update what `main()` created. Nothing has to be passed around and no variable
-has to be shared. Include the same ccutils headers in every file that uses them.
-
-```cpp
-// main.cpp
-#include <ccutils/ccutils.hpp>
-void solve(int n);                                  // solver.cpp
-
-int main() {
-  CCUTILS_SECTION_DEF(run, "Whole run");
-  CCUTILS_CPU_TIMER_DEF(kernel);
-  solve(4);
-  CCUTILS_TIMER_PRINT(kernel);                      // includes the samples taken in solve()
-  CCUTILS_SECTION_END(run);                         // prints everything solve() added
-}
-
-// solver.cpp
-#include <ccutils/ccutils.hpp>
-void solve(int n) {
-  CCUTILS_CPU_TIMER_USE(kernel);                    // main's timer, by name
-  CCUTILS_SUBSECTION_DEF(run, solve, "Solve");      // nested in main's section
-  for (int i = 0; i < n; ++i) {
-    CCUTILS_CPU_TIMER_START(kernel);
-    /* ... */
-    CCUTILS_CPU_TIMER_STOP(kernel);
-  }
-  CCUTILS_SECTION_JSON_PUT(run, "iterations", n);   // main's section, by name
-  CCUTILS_SUBSECTION_END(run, solve);
-}
-```
-
-## What works from any function
-
-| You want to | Macro | Object API |
-|-------------|-------|------------|
-| add data to an open section | `CCUTILS_SECTION_JSON_PUT(name, key, value)`, `..._SUB_PUT` | `ccutils::section("name").put(key, value)` |
-| add data to the innermost open section | | `ccutils::current_section().put(key, value)` |
-| open / close a subsection | `CCUTILS_SUBSECTION_DEF/END(section, subsection, ...)` | |
-| add data to a subsection | `CCUTILS_SUBSECTION_JSON_PUT(section, subsection, key, value)` | `ccutils::section("subsection").put(...)` |
-| use a timer defined elsewhere | `CCUTILS_CPU_TIMER_USE(name)`, then the usual `START` / `STOP` / `PRINT` / `SUM` macros | `ccutils::TimerRef t = ccutils::timer("name");` `t.start() t.stop() t.print() t.count() t.stats()` |
-| time the enclosing scope | `CCUTILS_TIMER_SCOPE(name)` | `ccutils::ScopedTimer s("name");` |
-| use a JSON object defined elsewhere | `CCUTILS_JSON_USE(name)` | `ccutils::named_json("name")` |
-
-MPI equivalents: `CCUTILS_MPI_TIMER_USE(name)` / `ccutils::mpi_timer("name")`,
-`CCUTILS_MPI_JSON_USE(name)`, `CCUTILS_MPI_GLOBAL_JSON_PUT` and
-`CCUTILS_MPI_LOCAL_JSON_PUT` (by section name), `CCUTILS_MPI_SUBSECTION_*`.
-
-## MPI
-
-`CCUTILS_MPI_INIT` is optional. It declares `ccutils_inmacro_myid` / `ccutils_inmacro_ntask`
-for *your* code in that scope; the ccutils macros no longer need them, so they work in
-any function. Elsewhere use `ccutils::mpi_rank()` and `ccutils::mpi_size()`.
+Sections are a user-defined tree addressed by slash-separated paths. A child path must
+extend the currently open parent path. Paths may be constants or assembled at runtime.
 
 ```cpp
-// worker.cpp - no CCUTILS_MPI_INIT, no shared variable
-void do_work() {
-  CCUTILS_MPI_TIMER_USE(halo);                                      // main's MPI timer
-  CCUTILS_MPI_SUBSECTION_DEF(run, work, "Work");
-  CCUTILS_MPI_GLOBAL_JSON_PUT(run, "iterations", 3);                // main's section
-  CCUTILS_MPI_LOCAL_JSON_PUT(run, "rank", ccutils::mpi_rank());
-  CCUTILS_MPI_ALL_PRINT_NAMED(worker, fprintf(fp, "rank %d\n", ccutils::mpi_rank()));
-  CCUTILS_MPI_SUBSECTION_END(run, work);
-}
+const std::string root = "solver";
+const std::string step = root + "/iteration_" + std::to_string(iteration);
+CCUTILS_SECTION_PATH_DEF(root, "Solver")
+CCUTILS_SECTION_PATH_DEF(step, "Solver iteration")
+
+ccutils::section(step).put("residual", residual);
+ccutils::TimerRef factor = ccutils::section(step).timer("factorization");
+factor.start();
+factorization();
+factor.stop();
+
+CCUTILS_SECTION_PATH_END(step)
+CCUTILS_SECTION_PATH_END(root)
 ```
 
-The collective rules are unchanged: `CCUTILS_MPI_ALL_PRINT*`, the `*_SECTION_END` /
-`*_SUBSECTION_END` macros and `CCUTILS_MPI_TIMER_PRINT*` must be reached by every rank
-of the communicator, whichever file they are in.
+Closing a section emits its registered timer summaries and nonempty JSON. For MPI timers,
+use `ccutils::section(path).mpi_timer(name)`; every rank must register the same timer names
+and sequence, and section close reports each timer collectively. Open parents
+before children and close children first. Each full path may be opened once during a
+process. Reopening a path, opening a child without its parent, or closing a parent while a
+child remains open prints a specific diagnostic and terminates the program.
 
-## Rules
+The tree owns each node's global JSON and timers. With MPI-enabled section APIs, each node
+also has rank-local JSON. Close is collective over the relevant communicator: ranks close
+the same path in the same order, synchronize, and rank 0 writes the gathered values. A
+non-collective close is not provided for MPI sections.
 
-* **Names are program-wide.** If several open sections (or live timers) share a name, the
-  innermost / most recently defined one is used.
-* **A section must be open** when you update it. Otherwise the data is ignored and ccutils
-  prints one warning on stderr. Data added after the section has ended is never printed.
-* **A timer lives as long as its scope.** `CCUTILS_CPU_TIMER_DEF` registers the variables it
-  declares; they are unregistered when the scope ends. `USE`/`ccutils::timer()` on a name
-  that no live timer has creates a persistent timer instead of failing.
-* `CCUTILS_CPU_TIMER_IMPORT` (extern, for a timer defined at file scope) still works.
-* **Use ccutils from one thread.** Registry lookup and output sinks use locks, but section
-  JSON values and timer state do not. Human banners and their bodies are also separate writes,
-  so concurrent output can interleave. The locks do not make concurrent section, timer, or
-  output calls safe.
-* With `CCUTILS_NO_JSON` the JSON macros compile to nothing, including in other files.
+## Naming and JSON
+
+Use the `CCUTILS_SECTION_PATH_*` macros when the path is a string expression. JSON is
+available through `ccutils::section(path).put(key, value)` or the corresponding path macro.
+MPI path sections provide `CCUTILS_MPI_SECTION_PATH_GLOBAL_JSON_PUT` and
+`CCUTILS_MPI_SECTION_PATH_RANK_JSON_PUT`. The parser exposes global values as
+`section.data` (or `section.global_data`) and rank values as `section.rank_data` /
+`section.per_rank(key)`; scripts do
+not need to know internal print or JSON block names.
+
+Legacy section/subsection macro spellings remain transitional wrappers. New code should
+model every node as a section path. In Python, read global JSON from `run[path].data` and
+rank-local JSON from `run[path].rank_data` or `run[path].per_rank(key)`. For all-ranks text,
+provide an explicit name with `CCUTILS_MPI_ALL_PRINT_NAMED` or
+`CCUTILS_MPI_ALL_PRINT_NAMED_COMM`; the unnamed forms use the stable fallback name
+`all_ranks`.

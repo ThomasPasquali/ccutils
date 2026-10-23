@@ -6,6 +6,16 @@ says otherwise.
 
 ## Implementation status and deviations from the plan
 
+### Section tree contract (current)
+
+Sections are nodes addressed by slash-separated paths. Parents must be open before
+children; close is strict LIFO; and paths are single-use for one process. Invalid
+reopening or close order prints a path-specific diagnostic and terminates. A node owns
+global JSON, per-rank JSON in MPI, and explicitly attached timers; nonempty values are
+emitted at close. MPI close is collective and gathers rank-local output to rank 0. New
+code uses path-based section APIs rather than separate section/subsection concepts.
+All-ranks text prints have names (the compatibility unnamed macros use `all_ranks`).
+
 What exists (all with tests, see `tests/README.md`):
 
 | Design section | Implemented in |

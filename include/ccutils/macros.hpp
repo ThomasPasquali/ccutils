@@ -109,6 +109,12 @@ class Section {
   static void end_named(const std::string& name) {
     close(name, uncaught_exception_count() > 0);
   }
+  static void start_path(const std::string& path, const std::string& title) {
+    machine::section_start(path.c_str(), title.c_str());
+    if (human_v2()) human_section_start(path, title);
+    else human_printf(CCUTILS_FMT_SECTION_START, path.c_str(), title.c_str());
+    human_flush();
+  }
 
  private:
   static int uncaught_exception_count() {
@@ -123,8 +129,9 @@ class Section {
       machine::section_end(name.c_str(), true, false);
       return;
     }
-#ifndef CCUTILS_NO_JSON
     SectionRef section_ref = section(name);
+    section_ref.emit_timers();
+#ifndef CCUTILS_NO_JSON
     machine::data_object(section_ref.json());
     if (!section_ref.json().empty()) {
       if (human_v2()) {
@@ -218,9 +225,9 @@ inline nlohmann::json& named_json(const std::string& name) {
   (ccutils::section(#name).put(key1, key2, (__VA_ARGS__)));
 
 #define CCUTILS_SUBSECTION_JSON_PUT(section_name, subsection, key, ...) \
-  (ccutils::section(#subsection).put(key, (__VA_ARGS__)));
+  (ccutils::section(ccutils::section_child_path(#section_name, #subsection)).put(key, (__VA_ARGS__)));
 #define CCUTILS_SUBSECTION_JSON_SUB_PUT(section_name, subsection, key1, key2, ...) \
-  (ccutils::section(#subsection).put(key1, key2, (__VA_ARGS__)));
+  (ccutils::section(ccutils::section_child_path(#section_name, #subsection)).put(key1, key2, (__VA_ARGS__)));
 
 #define CCUTILS_JSON_DEF(name) \
   nlohmann::json ccutils_json_##name; \
@@ -254,15 +261,15 @@ inline nlohmann::json& named_json(const std::string& name) {
   CCUTILS_SUBSECTION_DEF_IMPL(section, subsection, title)
 #ifdef CCUTILS_NO_JSON
 #define CCUTILS_SUBSECTION_DEF_IMPL(section, subsection, title) do { \
-  ccutils::Section::start(#subsection, title); \
+  ccutils::Section::start(ccutils::section_child_path(#section, #subsection), title); \
 } while (0);
 #define CCUTILS_SUBSECTION_END(section, subsection) do { \
-  ccutils::Section::end_named(#subsection); \
+  ccutils::Section::end_named(ccutils::section_child_path(#section, #subsection)); \
 } while (0);
 #else
 #define CCUTILS_SUBSECTION_DEF_IMPL(section, subsection, title) \
-  ccutils::Section::start(#subsection, title);
-#define CCUTILS_SUBSECTION_END(section_name, subsection) ccutils::Section::end_named(#subsection);
+  ccutils::Section::start(ccutils::section_child_path(#section, #subsection), title);
+#define CCUTILS_SUBSECTION_END(section_name, subsection) ccutils::Section::end_named(ccutils::section_child_path(#section_name, #subsection));
 #endif
 
 #define CCUTILS_SECTION_TIMER_DEF(section_name, timer_name) \
@@ -275,5 +282,22 @@ inline nlohmann::json& named_json(const std::string& name) {
   CCUTILS_CPU_TIMER_STOP(section_name##_##timer_name)
 #define CCUTILS_SECTION_TIMER_PRINT(section_name, timer_name) \
   CCUTILS_TIMER_PRINT(section_name##_##timer_name)
+
+/* Path APIs accept string expressions, including formatted paths assembled at runtime. */
+#define CCUTILS_SECTION_PATH_DEF(path, title) \
+  ccutils::Section::start_path((path), (title));
+#define CCUTILS_SECTION_PATH_END(path) \
+  ccutils::Section::end_named((path));
+#ifndef CCUTILS_NO_JSON
+#define CCUTILS_SECTION_PATH_JSON_PUT(path, key, ...) \
+  (ccutils::section((path)).put((key), (__VA_ARGS__)));
+#define CCUTILS_SECTION_PATH_JSON_SUB_PUT(path, key1, key2, ...) \
+  (ccutils::section((path)).put((key1), (key2), (__VA_ARGS__)));
+#else
+#define CCUTILS_SECTION_PATH_JSON_PUT(path, key, ...) ((void)0);
+#define CCUTILS_SECTION_PATH_JSON_SUB_PUT(path, key1, key2, ...) ((void)0);
+#endif
+#define CCUTILS_SECTION_PATH_TIMER(path, timer_name) \
+  ccutils::TimerRef timer_name = ccutils::section((path)).timer(#timer_name);
 
 #endif

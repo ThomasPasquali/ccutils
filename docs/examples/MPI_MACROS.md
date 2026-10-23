@@ -17,11 +17,17 @@ int main(int argc, char** argv) {
     CCUTILS_MPI_PRINTF_ONCE("world size: %d\n", ccutils_inmacro_ntask);
     CCUTILS_MPI_ALL_PRINT_NAMED(ranks, fprintf(fp, "hello from rank %d\n", ccutils_inmacro_myid));
 
-    CCUTILS_MPI_SECTION_DEF(run, "Run")
-    CCUTILS_MPI_SUBSECTION_DEF(run, measurements, "Measurements")
-    CCUTILS_MPI_SUBSECTION_JSON_PUT(run, measurements, "rank_value", ccutils_inmacro_myid)
-    CCUTILS_MPI_SUBSECTION_END(run, measurements)
-    CCUTILS_MPI_SECTION_END(run)
+    const std::string run = "run";
+    const std::string measurements = run + "/measurements";
+    CCUTILS_MPI_SECTION_PATH_DEF(run, "Run")
+    CCUTILS_MPI_SECTION_PATH_DEF(measurements, "Measurements")
+    CCUTILS_MPI_SECTION_PATH_RANK_JSON_PUT(measurements, "rank_value", ccutils_inmacro_myid)
+    ccutils::MpiTimer& step_timer = ccutils::section(measurements).mpi_timer("step");
+    step_timer.start();
+    /* collective or local work */
+    step_timer.stop();
+    CCUTILS_MPI_SECTION_PATH_END(measurements)
+    CCUTILS_MPI_SECTION_PATH_END(run)
 
     CCUTILS_MPI_JSON_DEF(metadata);
     CCUTILS_MPI_JSON_PUT(metadata, "rank", ccutils_inmacro_myid);

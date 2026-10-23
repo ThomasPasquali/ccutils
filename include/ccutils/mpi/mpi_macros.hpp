@@ -301,13 +301,13 @@ do { \
 } while (0);
 
 #define CCUTILS_MPI_ALL_PRINT(PRINTS_CODE_BLOCK) \
-    CCUTILS_MPI_ALL_PRINT_IMPL(MPI_COMM_WORLD, NULL, PRINTS_CODE_BLOCK)
+    CCUTILS_MPI_ALL_PRINT_IMPL(MPI_COMM_WORLD, "all_ranks", PRINTS_CODE_BLOCK)
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED(print_name, PRINTS_CODE_BLOCK) \
     CCUTILS_MPI_ALL_PRINT_IMPL(MPI_COMM_WORLD, #print_name, PRINTS_CODE_BLOCK)
 
 #define CCUTILS_MPI_ALL_PRINT_COMM(comm, PRINTS_CODE_BLOCK) \
-    CCUTILS_MPI_ALL_PRINT_IMPL(comm, NULL, PRINTS_CODE_BLOCK)
+    CCUTILS_MPI_ALL_PRINT_IMPL(comm, "all_ranks", PRINTS_CODE_BLOCK)
 
 #define CCUTILS_MPI_ALL_PRINT_NAMED_COMM(comm, print_name, PRINTS_CODE_BLOCK) \
     CCUTILS_MPI_ALL_PRINT_IMPL(comm, #print_name, PRINTS_CODE_BLOCK)
@@ -339,7 +339,7 @@ class MpiSection {
   void end() {
     if (!active_) return;
     active_ = false;
-    end_named(name_, "ccutils_rank_json");
+    end_named(name_, "rank_data");
   }
   static void start(const std::string& name, const char* title) {
     mpi_rank();
@@ -350,11 +350,12 @@ class MpiSection {
       human_flush(); machine::emit_section_start(title));
     machine::begin_mpi_section_records();
   }
-  static void end_named(const std::string& name, const char* print_name = "ccutils_rank_json") {
+  static void end_named(const std::string& name, const char* print_name = "rank_data") {
     if (uncaught_exception_count() > 0) { close_locally(name, true); return; }
+    SectionRef ref = section(name);
+    ref.emit_timers();
     const int _ccutils_defer_depth = machine::suspend_mpi_section_records();
 #ifndef CCUTILS_NO_JSON
-    SectionRef ref = section(name);
     CCUTILS_MPI_ALL_PRINT_IMPL(MPI_COMM_WORLD, print_name,
       machine::flush_deferred_records();
       if (!ref.json().empty()) fprintf(fp, "%s\n", CCUTILS_JSON_DUMP(ref.json()).c_str()));
@@ -645,13 +646,13 @@ class MpiSection {
   } while (0);
 
 #define CCUTILS_MPI_SUBSECTION_DEF(section, subsection, title) \
-  ccutils::MpiSection::start(#subsection, title);
+  ccutils::MpiSection::start(ccutils::section_child_path(#section, #subsection), title);
 #define CCUTILS_MPI_SUBSECTION_JSON_PUT(section_name, subsection, key, ...) \
-  (ccutils::section(#subsection).put(key, (__VA_ARGS__)));
+  (ccutils::section(ccutils::section_child_path(#section_name, #subsection)).put(key, (__VA_ARGS__)));
 #define CCUTILS_MPI_SUBSECTION_JSON_SUB_PUT(section_name, subsection, key1, key2, ...) \
-  (ccutils::section(#subsection).put(key1, key2, (__VA_ARGS__)));
+  (ccutils::section(ccutils::section_child_path(#section_name, #subsection)).put(key1, key2, (__VA_ARGS__)));
 #define CCUTILS_MPI_SUBSECTION_END(section_name, subsection) \
-  ccutils::MpiSection::end_named(#subsection, "ccutils_subsection_json");
+  ccutils::MpiSection::end_named(ccutils::section_child_path(#section_name, #subsection), "rank_data");
 
 #else
 #define CCUTILS_DECLARE_GLOBAL_JSON(name)
@@ -664,11 +665,11 @@ class MpiSection {
 #define CCUTILS_MPI_JSON_SUB_PUT(name, key1, key2, ...) ((void)0);
 #define CCUTILS_MPI_JSON_PRINT(name) ((void)0);
 #define CCUTILS_MPI_SUBSECTION_DEF(section, subsection, title) \
-  ccutils::MpiSection::start(#subsection, title);
+  ccutils::MpiSection::start(ccutils::section_child_path(#section, #subsection), title);
 #define CCUTILS_MPI_SUBSECTION_JSON_PUT(section, subsection, key, ...) ((void)0);
 #define CCUTILS_MPI_SUBSECTION_JSON_SUB_PUT(section, subsection, key1, key2, ...) ((void)0);
 #define CCUTILS_MPI_SUBSECTION_END(section, subsection) \
-  ccutils::MpiSection::end_named(#subsection, "ccutils_subsection_json");
+  ccutils::MpiSection::end_named(ccutils::section_child_path(#section, #subsection), "rank_data");
 #endif
 
 /**********************************************************************/
@@ -681,10 +682,19 @@ class MpiSection {
     ccutils::MpiSection::start(#name, title);
 
 #ifndef CCUTILS_NO_JSON
-#define CCUTILS_MPI_SECTION_END(name) ccutils::MpiSection::end_named(#name, "ccutils_rank_json");
+#define CCUTILS_MPI_SECTION_END(name) ccutils::MpiSection::end_named(#name, "rank_data");
 #else
-#define CCUTILS_MPI_SECTION_END(name) ccutils::MpiSection::end_named(#name, "ccutils_rank_json");
+#define CCUTILS_MPI_SECTION_END(name) ccutils::MpiSection::end_named(#name, "rank_data");
 #endif
+
+#define CCUTILS_MPI_SECTION_PATH_DEF(path, title) \
+  ccutils::MpiSection::start((path), (title));
+#define CCUTILS_MPI_SECTION_PATH_END(path) \
+  ccutils::MpiSection::end_named((path), "rank_data");
+#define CCUTILS_MPI_SECTION_PATH_GLOBAL_JSON_PUT(path, key, ...) \
+  do { if (ccutils::mpi_rank() == 0) ccutils::section((path)).put_global((key), (__VA_ARGS__)); } while (0);
+#define CCUTILS_MPI_SECTION_PATH_RANK_JSON_PUT(path, key, ...) \
+  do { ccutils::section((path)).put((key), (__VA_ARGS__)); } while (0);
 
 /**********************************************************************/
 /*                       MPI + CUDA PRINT MACROS                        */

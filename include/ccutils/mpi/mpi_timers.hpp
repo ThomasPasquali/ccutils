@@ -328,6 +328,14 @@ inline MpiTimer& mpi_timer(const std::string& name) {
   return *owner;
 }
 
+inline MpiTimer& SectionRef::mpi_timer(const std::string& timer_name) {
+  MpiTimer& result = ccutils::mpi_timer(timer_name);
+  add_timer_emitter(timer_name, [timer_name]() {
+    ccutils::mpi_timer(timer_name).print_stats(timer_name.c_str(), MPI_COMM_WORLD);
+  });
+  return result;
+}
+
 }  // namespace ccutils
 
 // Historical global name, kept so existing code compiles. It is unrelated to

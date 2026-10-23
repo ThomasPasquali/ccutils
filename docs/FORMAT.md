@@ -20,9 +20,13 @@ older human logs without them are parsed from their visible text and may be loss
 
 ## Human v2 output
 
-Section starts and ends use full paths. Values are printed as one JSON value per line,
-and timer reports use a table in milliseconds. Gathered MPI text has a rank prefix on each
-line. For example:
+Sections are nodes in a tree addressed by slash-separated paths, such as `solve/spmv`.
+Open each parent before its children and close in reverse order. A path is single-use for
+the process lifetime. Closing a node emits its nonempty data. In MPI, close is collective:
+all communicator members synchronize and rank-local data is gathered to rank 0. Human
+section starts and ends use full paths; values are key/value lines and timer reports share
+a table header for repeated reports at the same location. Gathered MPI text has a rank
+prefix on each line and each all-ranks print has a name. For example:
 
 ```text
 == solve :: Solve phase ==
@@ -43,9 +47,10 @@ The corresponding structural lines are `== <path> :: <title> ==` and
 that need byte-exact text should use the machine stream, which carries text encoding and
 trailing-newline metadata.
 
-When every rank in an all-print emits JSON with compatible structure, human output shows
-one `schema:` template followed by compact positional values per rank. If payloads differ
-in structure or include ordinary text, the rank-prefixed output is used.
+When every rank in an all-print emits a complete JSON value, CCUTILS recognizes it as JSON
+regardless of the print name. Compatible structures use one `schema:` template followed by
+compact positional values per rank in human output. Payloads with different structures are
+kept as JSON values per rank; mixed ordinary text and JSON remains text.
 
 ## Records
 
@@ -65,9 +70,9 @@ Readers must ignore unknown fields and unknown types.
 
 | `type` | Fields | Emitted by |
 |--------|--------|------------|
-| `section_start` | `title` | `CCUTILS_SECTION_DEF`, `CCUTILS_SUBSECTION_DEF`, `CCUTILS_MPI_SECTION_DEF`, `CCUTILS_MPI_SUBSECTION_DEF` |
+| `section_start` | `title` | path-based section start macros |
 | `section_end` | `ok` | the matching `*_END` |
-| `warning` | `message` | a section is closed because its matching end macro was skipped |
+| `warning` | `message` | a recoverable section warning |
 | `run_start` | `ccutils_version`, `format`, `host`, optional `slurm_job_id` and `mpi` (`library`, `world_size`, `wtime_is_global`, `wtick_s`) | first machine record in each process stream |
 | `data_batch` | `values` (JSON object) | non-MPI section JSON and MPI global JSON, written as one record per object when the section ends |
 | `data` | `key`, `value` (any JSON) | accepted for older streams; one record per top-level key |

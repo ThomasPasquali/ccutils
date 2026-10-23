@@ -5,19 +5,32 @@ Include `<ccutils/ccutils.hpp>` for core utilities, or include one header such a
 ## Sections and JSON
 
 ```cpp
-CCUTILS_SECTION_DEF(setup, "Setup")
-CCUTILS_SECTION_JSON_PUT(setup, "device_count", 2)
-CCUTILS_SECTION_JSON_SUB_PUT(setup, "config", "mode", "fast")
-
-CCUTILS_SUBSECTION_DEF(setup, hardware, "Hardware")
-CCUTILS_SUBSECTION_JSON_PUT(setup, hardware, "threads", 8)
-CCUTILS_SUBSECTION_JSON_SUB_PUT(setup, hardware, "device", "name", "GPU")
-CCUTILS_SUBSECTION_END(setup, hardware)
-
-CCUTILS_SECTION_END(setup)
+const std::string phase = "setup";
+const std::string hardware = phase + "/hardware";
+CCUTILS_SECTION_PATH_DEF(phase, "Setup")
+CCUTILS_SECTION_PATH_JSON_PUT(phase, "device_count", 2)
+CCUTILS_SECTION_PATH_DEF(hardware, "Hardware")
+CCUTILS_SECTION_PATH_JSON_PUT(hardware, "threads", 8)
+CCUTILS_SECTION_PATH_JSON_SUB_PUT(hardware, "device", "name", "GPU")
+CCUTILS_SECTION_PATH_END(hardware)
+CCUTILS_SECTION_PATH_END(phase)
 ```
 
-Each section and subsection name is a C++ identifier and must be unique among its siblings. Subsections are nested section markers, so the parser attaches them as child sections. A nonempty section or subsection emits a `ccutils_json` block containing a JSON object. JSON keys and values use nlohmann/json assignment rules. Define `CCUTILS_NO_JSON` to disable JSON support; JSON storage/put/print macros then become no-ops, while section and subsection markers remain available.
+Sections form a tree from slash-separated path strings. Open parents before children and
+close children first. A path can be opened only once per process. Reopening a closed path,
+opening a child without its parent, or closing a parent while a child is open prints a
+specific `ccutils section error` and terminates the process. Paths and titles can be
+ordinary strings, including formatted strings assembled at runtime. A section owns its
+global JSON, MPI rank-local JSON, and timers explicitly obtained through
+`ccutils::section(path).timer(name)` or (with MPI headers) `.mpi_timer(name)`; nonempty
+values are emitted when that section closes. MPI timer names and close order must match on
+all ranks because each timer is reported collectively.
+JSON keys and values use nlohmann/json assignment rules. Define `CCUTILS_NO_JSON` to
+disable JSON support.
+
+The older `CCUTILS_SUBSECTION_*` macro spellings are transitional wrappers around child
+paths. New code should use `CCUTILS_SECTION_PATH_*` for every node in the tree; in Python,
+read the resulting values through `run[path].data` and `run[path].rank_data`.
 
 For JSON output outside sections, declare a named object and print it when ready:
 
@@ -107,6 +120,12 @@ must be gathered and printed.
 
 MPI: include `<ccutils/mpi/mpi_macros.hpp>` and/or `<ccutils/mpi/mpi_timers.hpp>` after MPI headers. Link `ccutils::ccutils_mpi`. The application must call `MPI_Init` before CCUTILS MPI operations and ensure all ranks enter collective operations.
 
-MPI subsections use `CCUTILS_MPI_SUBSECTION_DEF/END` and the matching `CCUTILS_MPI_SUBSECTION_JSON_PUT/SUB_PUT` macros. Markers are printed once; nonempty subsection JSON is gathered and printed with rank markers. For standalone rank-local JSON, use `CCUTILS_MPI_JSON_DEF/PUT/SUB_PUT/PRINT`; every rank must call `CCUTILS_MPI_JSON_PRINT` in the same order, and each nonempty object's JSON is labeled by rank. With `CCUTILS_NO_JSON`, storage and JSON output are disabled while subsection markers remain.
+MPI section close is collective: every rank in the communicator must close the same path
+in the same order. Close synchronizes, gathers nonempty rank-local JSON, and writes the
+result on rank zero. Use `CCUTILS_MPI_SECTION_PATH_DEF/END` with
+`CCUTILS_MPI_SECTION_PATH_GLOBAL_JSON_PUT` and
+`CCUTILS_MPI_SECTION_PATH_RANK_JSON_PUT`. Unnamed all-ranks text uses the stable name
+`all_ranks`; prefer `CCUTILS_MPI_ALL_PRINT_NAMED` or its communicator variant to give
+each print a meaningful name.
 
 CUDA: include `<ccutils/cuda/cuda_macros.hpp>`, `<ccutils/cuda/cuda_timers.hpp>`, or `<ccutils/cuda/cuda_utils.hpp>` from CUDA-aware code. Link `ccutils::ccutils_cuda`. The application owns device selection, streams, and CUDA resource lifetimes.

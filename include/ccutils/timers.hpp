@@ -243,6 +243,15 @@ class TimerRef {
 
 inline TimerRef timer(const std::string& name) { return TimerRef(name, detail::cpu_timer_data(name)); }
 
+/* A section-owned timer is summarized automatically when its section closes. */
+inline TimerRef SectionRef::timer(const std::string& timer_name) {
+  const TimerRef result = ccutils::timer(timer_name);
+  add_timer_emitter(timer_name, [timer_name]() {
+    ccutils::timer(timer_name).print("Timer");
+  });
+  return result;
+}
+
 /* Starts the named timer now and records a sample when the object goes out of scope. */
 class ScopedTimer {
  public:

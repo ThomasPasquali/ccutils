@@ -21,6 +21,7 @@ Legend: **Design** = section of DESIGN.md. **Where** = files to change.
 | 4 MPI integration | framed H/M all-print, chunked gather, MPI timer distributions, rank policies, sample records and warm-up exclusion: **implemented**; MPI runtime matrix was not run per request. Optional section timer batching is deferred. |
 | 5 Parser v2 | model, JSONL / inline / legacy / human-v2 front ends, CLI, text chunk reassembly and MPI timer rank queries: **done** |
 | 6 Docs and switch | v2 default, migration guide, output and parser docs: **done** |
+| Section tree redesign | path-based nodes, one-time paths, strict parent/child close ordering, close-time data and explicit all-ranks print names: **in progress** |
 
 ## Ground rules (learned while implementing; read before touching anything)
 

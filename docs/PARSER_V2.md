@@ -45,8 +45,9 @@ run   Whole run
 └─ work   Work
 ```
 
-* `run["a/b"]` is the first section with that path; a section re-opened in a loop appears
-  several times: use `run.all("a/b")`. A wrong path raises `KeyError` with suggestions.
+* `run["a/b"]` returns the section at that path. CCUTILS section paths are single-use in a
+  process; `run.all("a/b")` is available when an input combines multiple streams that contain
+  the same path. A wrong path raises `KeyError` with suggestions.
 * `timers_table()` includes pooled and per-rank MPI statistics, imbalance, slowest rank,
   reporting count, and errors. `timers_df(level="comm"|"rank")` filters by scope;
   with no level, it returns all reports. `data_table()` rows: `section, scope, rank, key, value`.
@@ -94,9 +95,23 @@ prints multiple JSON values. Each `call.ranks[rank]` also provides `.text`, `.li
 `.json()`. `AllPrint.grep(pattern)` searches rank lines; `diff_ranks(left, right)`
 compares two ranks.
 
+Section JSON is available directly from the section model, without knowing its output
+marker name. For example, global values are in `section.data`, while MPI values are keyed
+by rank in `section.rank_data`. JSON gathered automatically when an MPI section closes is
+normalized into this same mapping:
+
 ```python
-jsons = run["graph_structure"].prints.calls("ccutils_rank_json")[0].jsons
-print(jsons[0])  # parsed JSON from rank 0
+section = run["bfs_execution/run_0"]
+print(section.data)                    # global JSON values
+print(section.rank_data.get(0, {}))    # rank 0 JSON values
+print(section.per_rank("timeline"))   # timeline values from every rank
+```
+
+Timers registered with a section appear in `section.timers` and are available after close:
+
+```python
+timer = run["bfs_execution"].timers["bfs_run"]
+print(timer.avg_ms, timer.by_rank())
 ```
 
 The compatibility API is available from `ccutils.ccutils_parser`: `parse(text, **options)`
